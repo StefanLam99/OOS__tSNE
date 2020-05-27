@@ -39,6 +39,7 @@ class tsne:
         iY = np.zeros((n, self.d_components))# used for momemntum
         gains = np.ones((n, self.d_components)) # adaptive
 
+        t0 = time()
         for iter in range(self.max_iter):
             Q, num = joint_Q(Y, self.dof)
 
@@ -64,7 +65,7 @@ class tsne:
             cost[iter] = np.sum(P * np.log(P / Q))
             if (iter + 1) % 10 == 0:
                 C = np.sum(P * np.log(P / Q))
-                print("Iteration %d: cost is %f" % (iter + 1, C))
+                print("Iteration: %d cost: %.4f elapsed time: %.2f" % (iter + 1, C, time() - t0))
 
             # Stop the early exaggeration
             if iter == 100:
@@ -82,13 +83,14 @@ class tsne:
         cost = np.zeros(self.max_iter)
         dY = np.zeros((n, self.d_components)) # gradient
 
-        alpha = 2
-        beta_1 = 0.9
-        beta_2 = 0.999  # initialize the values of the parameters
+        alpha = self.learning_rate
+        beta_1 = 0.85
+        beta_2 = 0.9  # initialize the values of the parameters
         epsilon = 1e-8
 
         m_t = np.zeros((n, self.d_components))
         v_t = np.zeros((n, self.d_components))
+        t0 = time()
         for iter in range(self.max_iter):
             t = iter + 1
             Q, num = joint_Q(Y, self.dof)
@@ -107,7 +109,7 @@ class tsne:
             cost[iter] = np.sum(P * np.log(P / Q))
             if (iter + 1) % 10 == 0:
                 C = np.sum(P * np.log(P / Q))
-                print("Iteration %d: cost is %f" % (iter + 1, C))
+                print("Iteration: %d cost: %.4f elapsed time: %.2f" % (iter + 1, C, time() - t0))
 
             # Stop the early exaggeration
             if iter == 100:

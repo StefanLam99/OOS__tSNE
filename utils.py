@@ -183,14 +183,15 @@ def gauss_kernel(x, X, sigma):
         k[i] = np.exp(-(np.linalg.norm(x - X[i,:])**2)/(2.*sigma[i]))
     return k
 
-def plot(Y, labels, title=''):
+def plot(Y, labels, title='', label = True, cmap = 'Paired', s=8):
     fig, ax = plt.subplots()
-    scatter = ax.scatter(Y[:, 0], Y[:, 1], c=labels, cmap='Paired', s=8)
+    scatter = ax.scatter(Y[:, 0], Y[:, 1], c=labels, cmap=cmap, s=s)
     ax.set_xlabel('dim 1')
     ax.set_ylabel('dim 2')
     ax.set_title(title)
     #ax.xaxis.set_major_formatter(NullFormatter())
     #ax.yaxis.set_major_formatter(NullFormatter())
-    plt.legend(*scatter.legend_elements(), loc="lower right", title='Labels', prop={'size': 6}, fancybox=True)
+    if label:
+        plt.legend(*scatter.legend_elements(), loc="lower right", title='Labels', prop={'size': 6}, fancybox=True)
     fig.tight_layout()
     plt.show()

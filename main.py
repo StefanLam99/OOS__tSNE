@@ -6,6 +6,7 @@ from sklearn.preprocessing import normalize
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 from datasets import Dataset
+from utils import plot
 import cProfile
 def mainMNIST():
     begin = time()
@@ -24,17 +25,9 @@ def mainMNIST():
     X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=6000)
     X = X_train
     y = y_train
-    model = tsne(random_state=0, grad_method='ADAM', perplexity=30, max_iter=1000, data_name='MNIST')
+    model = tsne(random_state=0, grad_method=grad_method, perplexity=40, max_iter=1000, data_name='MNIST')
     Y = model.transform(X)
-    fig, ax = plt.subplots()
-    scatter = ax.scatter(Y[:, 0], Y[:, 1], c=y, cmap='Paired', s=1)
-    ax.set_xlabel('dim 1')
-    ax.set_ylabel('dim 2')
-    ax.set_title('MNIST learning rate is %d sample is %s' % (2, grad_method))
-    plt.legend(*scatter.legend_elements(), loc="lower right", title='Labels', prop={'size': 6}, fancybox=True)
-    fig.tight_layout()
-    plt.show()
-
+    plot(Y, y)
 def mainIRIS():
     # import some data to play with
     iris = datasets.load_iris()
@@ -42,7 +35,7 @@ def mainIRIS():
     y = iris.target
     X = normalize(X)
 
-    model = tsne(random_state=20, data_name='IRIS', grad_method='gains', perplexity=30, max_iter=1000)
+    model = tsne(random_state=20, data_name='IRIS', grad_method='gains', perplexity=40, max_iter=1000)
     Y = model.transform(X)
     fig, ax = plt.subplots()
     scatter = ax.scatter(Y[:, 0], Y[:, 1], c=y, cmap='Paired', s=8)
@@ -61,18 +54,9 @@ def mainCoil20():
     dataset = Dataset(seed)
     X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
 
-    model = tsne(random_state=seed, data_name='IRIS', grad_method=grad_method, perplexity=30, max_iter=1000)
+    model = tsne(learning_rate=0.5,random_state=seed, data_name='COIL20', grad_method=grad_method, perplexity=40, max_iter=1000)
     Y = model.transform(X)
-    fig, ax = plt.subplots()
-    scatter = ax.scatter(Y[:, 0], Y[:, 1], c=y, cmap='Paired', s=8)
-    ax.set_xlabel('dim 1')
-    ax.set_ylabel('dim 2')
-    ax.set_title('learning rate is %d sample is %s' % (2, grad_method))
-    ax.xaxis.set_major_formatter(NullFormatter())
-    ax.yaxis.set_major_formatter(NullFormatter())
-    plt.legend(*scatter.legend_elements(), loc="lower right", title='Labels', prop={'size': 6}, fancybox=True)
-    fig.tight_layout()
-    plt.show()
+    plot(Y, y, cmap='tab20b')
 
 if __name__ == '__main__':
     mainMNIST()

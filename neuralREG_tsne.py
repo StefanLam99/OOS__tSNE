@@ -15,7 +15,7 @@ import keras.losses
 from utils import *
 from autoencoder import Autoencoder
 class neuralREG_tSNE:
-    def __init__(self, data_name ='',d_components=2,  perplexity=30., epochs=100, lr=0.001, random_state=0, batch_size=100,encoder, decoder,
+    def __init__(self, data_name ='',d_components=2,  perplexity=30., epochs=100, lr=0.001, random_state=0, batch_size=100,encoder=None, decoder=None,
                  model=None, labda=0.99):
         self.d_components = d_components
         self.perplexity = perplexity
