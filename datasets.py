@@ -84,8 +84,8 @@ class Dataset:
         y_train = data[0:n_train, -1].astype(np.uint32, copy = False)
         X_train = data[0:n_train, 0:-1].astype(np.float32, copy=False)
 
-        y_test = data[n_train:n_train+n_test, 0].astype(np.uint32, copy = False)
-        X_test = data[n_train:n_train+n_test, 1:].astype(np.float32, copy=False)
+        y_test = data[n_train:n_train+n_test, -1].astype(np.uint32, copy = False)
+        X_test = data[n_train:n_train+n_test, 0:-1].astype(np.float32, copy=False)
 
         return X, y, X_train, y_train, X_test, y_test
 

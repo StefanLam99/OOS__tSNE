@@ -6,7 +6,8 @@ from datasets import Dataset
 
 class kernel_tSNE:
     def __init__(self, d_components=2, initial_dims=30, initialization='PCA', perplexity=30, dof=1., early_exaggeration=4,
-                 random_state=None, data_name = '', max_iter =1000, alpha=None, X_train = None):
+                 random_state=None, data_name = '', max_iter =1000, alpha=None, lr = 0.5,beta_1 = 0.9,
+                 beta_2 = 0.999  ,X_train = None):
 
         self.d_components = d_components # dimension of projection space
         self.initial_dims = initial_dims # initial dimensions of data, before applying t-sne
@@ -19,6 +20,9 @@ class kernel_tSNE:
         self.dof = dof
         self.alpha = alpha
         self.X_train = X_train
+        self.lr = lr
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
         if(self.initialization is "PCA"):
             print("First reducing dimensions of X_train with PCA to %.2f dimensions" %(self.initial_dims))
             self.X_train = pca(self.X_train, self.initial_dims).real
@@ -47,20 +51,19 @@ class kernel_tSNE:
         Y = np.dot(K, self.alpha) # random initial solution
         print(Y)
         # training with ADAM
-        alpha = 0.5
-        beta_1 = 0.9
-        beta_2 = 0.999  # initialize the values of the parameters
-        epsilon = 1e-8
-
+        epsilon = 1e-8 # prevents division by zero
         m_t = np.zeros((n, self.d_components))
         v_t = np.zeros((n, self.d_components))
         t0 = time()
         print('Starting gradient descent...')
         for iter in range(self.max_iter):
             t = iter+1
+
             # calculating gradient:
             Q, num = joint_Q(Y, self.dof)
+
             PQ_diff = self.P - Q
+
             # gradient:
             dalpha = np.zeros((n, self.d_components))
             ''' 
@@ -71,24 +74,36 @@ class kernel_tSNE:
                                         * (Y[i, :] - Y[j,:])*K[i, l]
             '''
             first_term =((2. * self.dof + 2.) / self.dof) * (PQ_diff * num)
+
             differences = []
             for d in range(self.d_components):
                 #print(Y[:,d].shape)
                 differences.append(Y[:,d].reshape(-1,1) - Y[:,d].reshape(1,-1))
+                difference = Y[:,d].reshape(-1,1) - Y[:,d].reshape(1,-1)
+                dalpha[:,d] = np.sum(np.sum(first_term*difference,axis=1).reshape(-1,1)*K,axis=0)
 
-
+            ''' 
             for l in range(n):
                 kernel_factor = K[:,l].reshape(-1,1)
                 for d in range(self.d_components):
                     dalpha[l, d] = np.sum(first_term * differences[d]*kernel_factor)
                     #print(dalpha)
+            
+            for l in range(n):
+                kernel_factor = K[:,l]
+                for d in range(self.d_components):
+                    dalpha[l, d] = np.sum(np.sum(first_term * differences[d],axis=1)*kernel_factor)
+                    #print(dalpha)
+            '''
 
-            m_t = beta_1 * m_t + (1 - beta_1) * dalpha
-            v_t = beta_2 * v_t + (1 - beta_2) * (dalpha * dalpha)
-            m_corr = m_t / (1 - (beta_1 ** t))
-            v_corr = v_t / (1 - (beta_2 ** t))
-            self.alpha = self.alpha - (alpha * m_corr) / (np.sqrt(v_corr) + epsilon)
+            m_t = self.beta_1 * m_t + (1 - self.beta_1) * dalpha
+            v_t = self.beta_2 * v_t + (1 - self.beta_2) * (dalpha * dalpha)
+            m_corr = m_t / (1 - (self.beta_1 ** t))
+            v_corr = v_t / (1 - (self.beta_2 ** t))
+            self.alpha = self.alpha - (self.lr * m_corr) / (np.sqrt(v_corr) + epsilon)
             Y = np.dot(K, self.alpha)
+
+            print('step 5: ' + str(time() - t0))
            # print(Y)
             # Compute cost function
 
@@ -110,7 +125,7 @@ class kernel_tSNE:
             print('Model not yet trained!')
             return
         if(self.initialization is "PCA"):
-            print("First reducing dimensions of X with PCA to %.2f dimensions" %(self.initial_dims))
+            print("First reducing dimensions of X with PCA to %.2f dimensions" % (self.initial_dims))
             X = pca(X, self.initial_dims).real
 
         (m, _) = X.shape
@@ -128,28 +143,30 @@ if __name__ == '__main__':
     seed = 0
     dataset = Dataset(seed)
     #X, y, X_train, y_train, X_test, y_test = dataset.get_IRIS_data(n_train=100)
-    X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=1000, n_test=4000)
-    alpha = np.genfromtxt('kernelMNIST1000alpha.csv', delimiter=',')
-    model = kernel_tSNE(random_state=seed, max_iter=200, X_train=X_train, alpha=alpha)
-    #Y, alpha, cost = model.train()
-    #np.savetxt('kernelMNIST1000Y.csv', Y, delimiter=',')
-    #np.savetxt('kernelMNIST1000alpha.csv', alpha, delimiter=',')
-    #np.savetxt('kernelMNIST1000cost.csv', cost, delimiter=',')
+    #X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
+    X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=10000, n_test=4000)
+    #alpha = np.genfromtxt('kernelCoil20alpha.csv', delimiter=',')
+    model = kernel_tSNE(random_state=seed, max_iter=300, X_train=X_train)
+    Y, alpha, cost = model.train()
+    np.savetxt('kernelMNIST10000Y.csv', Y, delimiter=',')
+    np.savetxt('kernelMNIST10000alpha.csv', alpha, delimiter=',')
+    np.savetxt('kernelMNIST10000cost.csv', cost, delimiter=',')
+    #np.savetxt('kernelCoil20alpha.csv', alpha, delimiter=',')
     Y = model.predict(X_train)
     #np.savetxt('test.csv' , y_test, delimiter=',')
-    np.savetxt('kerneltrainY.csv', Y, delimiter=',')
+    #np.savetxt('kerneltrainY.csv', Y, delimiter=',')
     end = time()
-    plot(Y, y_train, title='Kernel t-SNE: MNIST train 1000, ' )
+    plot(Y, y_train, title='Kernel t-SNE: mnist10000 train, ' )
     Y = model.predict(X_test)
-    plot(Y, y_test, title='Kernel t-SNE: MNIST test, ' )
+    plot(Y, y_test, title='Kernel t-SNE: mnist10000 test, ' )
 
+    '''' 
     X_train = pca(X_train, no_dims=30).real
     X_test = pca(X_test, no_dims=30).real
     _,sigma = cond_probs(X_train)
     K_train=np.zeros((1000,1000))
-
     np.savetxt('keneltestY.csv',Y, delimiter=',')
-
+'''
 
 
 

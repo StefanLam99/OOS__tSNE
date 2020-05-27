@@ -142,8 +142,6 @@ class tsne:
         P = joint_average_P(cond_P)
         np.savetxt('results/' + self.data_name + 'Probabilities'+self.grad_method + '.csv', P, delimiter=',' )
 
-
-
         print("Start gradient descent...")
         t0 = time()
         if self.grad_method == 'ADAM':
@@ -151,8 +149,8 @@ class tsne:
         elif self.grad_method == 'gains':
             Y, cost = self.grad_descent_gains(X, Y, P)
 
-        np.savetxt('results/' + self.data_name + 'cost'+self.grad_method + '.csv', cost, delimiter=',' )
-        np.savetxt('results/' + self.data_name+'Y' + self.grad_method + '.csv', Y, delimiter=',')
+        np.savetxt('results/' + self.data_name + '/' +self.grad_method  + 'cost' + str(self.d_components) +'.csv', cost, delimiter=',' )
+        np.savetxt('results/' + self.data_name + '/'+ self.grad_method +  'Y' +str(self.d_components) +'.csv', Y, delimiter=',')
 
 
         print("Gradient descent took %.4f seconds" % (time() - t0))

@@ -21,10 +21,10 @@ def mainMNIST():
     seed = 0
     grad_method = 'ADAM'
     dataset = Dataset(seed)
-    X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data()
+    X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=6000)
     X = X_train
     y = y_train
-    model = tsne(random_state=20, grad_method='ADAM', perplexity=30, max_iter=1000, data_name='MNIST')
+    model = tsne(random_state=0, grad_method='ADAM', perplexity=30, max_iter=1000, data_name='MNIST')
     Y = model.transform(X)
     fig, ax = plt.subplots()
     scatter = ax.scatter(Y[:, 0], Y[:, 1], c=y, cmap='Paired', s=1)
