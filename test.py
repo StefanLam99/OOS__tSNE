@@ -9,13 +9,26 @@ from datasets import Dataset
 import matplotlib.pyplot as plt
 import numpy as np
 seed = 0
+data_name = 'MNIST'
+file_path = 'results/'+data_name + '/' + data_name + 'costplot'
 dataset = Dataset(seed)
-X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
-Cadam = np.genfromtxt('results/COIL20/ADAMcost2.csv', delimiter=',')
-Cgains = np.genfromtxt('results/COIL20/gainscost2.csv', delimiter=',')
-x = range(1,1001)
+#X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
+Csgd = np.genfromtxt('results/'+data_name+'/SGDcost2.csv', delimiter=',')
 
-plt.plot(x, Cadam)
-plt.plot(x, Cgains)
-plt.legend(['ADAM', 'gains'], loc='upper right')
+Cadam = np.genfromtxt('results/'+data_name+'/ADAMcost2.csv', delimiter=',')
+Cgains = np.genfromtxt('results/'+data_name+'/gainscost2.csv', delimiter=',')
+start = 101
+end = 1000
+x = range(start,end)
+plt.plot(x, Csgd[start:end], c='r')
+plt.plot(x, Cgains[start:end], c='orange')
+plt.plot(x, Cadam[start:end], c = 'b')
+
+plt.xticks(np.arange(0,1001,100))
+plt.xlim(0,1000)
+
+plt.xlabel('Iteration')
+plt.ylabel('t-SNE cost')
+plt.legend(['SGD','ADAM', 'a-SGD with momentum'], loc='upper right',frameon=True, fancybox=True)
+plt.savefig(file_path)
 plt.show()

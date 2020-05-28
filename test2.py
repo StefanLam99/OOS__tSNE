@@ -1,7 +1,7 @@
 from keras.datasets import cifar10
 
 from datasets import Dataset
-from utils import plot
+from utils import *
 from time import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -38,18 +38,16 @@ alphabet = ['A', 'B', 'C' ,'D' ,'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N'
  'S', 'T', 'U', 'V', 'W' ,'X', 'Y', 'Z']
 seed = 0
 dataset = Dataset(seed)
-X, y, X_train, y_train, X_test, y_test = dataset.get_LETTER_data(n_train=1000)
-
+#X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=6000)
+y_train = np.genfromtxt('results/MNIST/labels6000train0.csv', delimiter=',')
 cmap = cm.get_cmap('gist_earth', 26)
 print(type(cmap))
 
 model = tsne(random_state=0, initialization='no', initial_dims=100, grad_method='gains', perplexity=40, max_iter=1000, data_name='LETTER', learning_rate=500)
 #Y = model.transform(X_train)
-Y = np.genfromtxt('results/LETTER/gainsY2.csv', delimiter=',')
-for i, letter in enumerate(alphabet):
-    plt.scatter(Y[:,0][y_train==i+1], Y[:,1][y_train==i+1], s=20, c= np.array(cmap(i)), marker='$'+letter+'$', linewidths=0.2)
-plt.show()
-#plot(Y, y_train)
+Y = np.genfromtxt('results/MNIST/ADAMY2.csv', delimiter=',')
+marker=['0', '1','2','3','4','5','6','7','8','9']
+plot(Y, y_train, label=True, s=1, linewidth=0.1, save_path='results/MNIST/Plots/scatter')
 
 
 

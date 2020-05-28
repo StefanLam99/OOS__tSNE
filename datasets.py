@@ -2,7 +2,7 @@
 # Preprocesses and loads several datasets
 
 import numpy as np
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import normalize, minmax_scale
 from keras.datasets import cifar10
 class Dataset:
 
@@ -63,12 +63,17 @@ class Dataset:
         return X, y, X_train, y_train, X_test, y_test
 
     def get_LETTER_data(self, n_train = 6000, n_test = 1000):
+        '''
+        Preprocesses and loads the letter recognition data. 20000 samples describing
+        20 differnt fonts of the classes 26 capital letters of the english alphabet.
+        Features are statistical measures and edge counts
+        '''
         np.random.seed(self.seed)
         print('loading and preprocessing LETTER data...')
         data = np.genfromtxt('data/LETTER/letter_data.csv', delimiter=',')
         np.random.shuffle(data)
         X = data[:, 1:].astype(np.float32, copy=False)
-        X = normalize(X)
+        X = minmax_scale(X)
         y = data[:,0]
 
         y_train = data[0:n_train, 0]

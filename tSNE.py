@@ -118,6 +118,44 @@ class tsne:
 
         return Y, cost
 
+    def grad_descent(self, X, Y, P):
+        '''
+        Gradient descent according to the method described in (Maaten & Hinton 2008)
+        Y is the initial solution
+        '''
+        P = P * self.early_exaggeration
+        (n, d) = X.shape
+        cost = np.zeros(self.max_iter)
+
+
+        dY = np.zeros((n, self.d_components)) # gradient
+        iY = np.zeros((n, self.d_components))# used for momemntum
+
+
+        t0 = time()
+        for iter in range(self.max_iter):
+            Q, num = joint_Q(Y, self.dof)
+
+            PQ_diff = P - Q
+            # gradient:
+            for i in range(n):
+                dY[i, :] = ((2.*self.dof+2.)/self.dof)*np.sum(np.tile(PQ_diff[:, i] * num[:, i], (self.d_components, 1)).T * (Y[i, :] - Y), 0)
+
+            # Perform the update
+            Y = Y - self.learning_rate * dY
+            #Y = Y - np.tile(np.mean(Y, 0), (n, 1))
+
+            # Compute cost function
+            cost[iter] = np.sum(P * np.log(P / Q))
+            if (iter + 1) % 10 == 0:
+                C = np.sum(P * np.log(P / Q))
+                print("Iteration: %d cost: %.4f elapsed time: %.2f" % (iter + 1, C, time() - t0))
+
+            # Stop the early exaggeration
+            if iter == 100:
+                P = P / self.early_exaggeration
+        return Y, cost
+
     @profile
     def transform(self, X):
         """
@@ -142,7 +180,7 @@ class tsne:
 
         cond_P, _ = cond_probs(X, perplexity=self.perplexity)
         P = joint_average_P(cond_P)
-        np.savetxt('results/' + self.data_name + 'Probabilities'+self.grad_method + '.csv', P, delimiter=',' )
+        #np.savetxt('results/' + self.data_name + 'Probabilities'+self.grad_method + '.csv', P, delimiter=',' )
 
         print("Start gradient descent...")
         t0 = time()
@@ -150,6 +188,8 @@ class tsne:
             Y, cost = self.grad_descent_ADAM(X, Y, P)
         elif self.grad_method == 'gains':
             Y, cost = self.grad_descent_gains(X, Y, P)
+        elif self.grad_method == 'SGD':
+            Y, cost = self.grad_descent(X, Y, P)
 
         np.savetxt('results/' + self.data_name + '/' +self.grad_method  + 'cost' + str(self.d_components) +'.csv', cost, delimiter=',' )
         np.savetxt('results/' + self.data_name + '/'+ self.grad_method +  'Y' +str(self.d_components) +'.csv', Y, delimiter=',')

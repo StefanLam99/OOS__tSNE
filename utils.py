@@ -3,6 +3,7 @@ import numpy as np
 import cProfile
 from time import time
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from matplotlib.ticker import NullFormatter
 # Disable
 def blockPrint():
@@ -183,15 +184,34 @@ def gauss_kernel(x, X, sigma):
         k[i] = np.exp(-(np.linalg.norm(x - X[i,:])**2)/(2.*sigma[i]))
     return k
 
-def plot(Y, labels, title='', label = True, cmap = 'Paired', s=15):
+def plot(Y, labels, title='',marker = None ,label = False, cmap = 'Paired', s=15, save_path=None, linewidth=1):
     fig, ax = plt.subplots()
-    scatter = ax.scatter(Y[:, 0], Y[:, 1], c=labels,  s=s, marker='$K$')
-    ax.set_xlabel('dim 1')
-    ax.set_ylabel('dim 2')
+
+    if marker == None:
+        scatter = ax.scatter(Y[:, 0], Y[:, 1], c=labels,cmap=cmap , s=s)
+    else:
+        cmap = cm.get_cmap(cmap, len(marker))
+        for i, e in enumerate(marker):
+
+            ax.scatter(Y[:,0][labels==i], Y[:,1][labels==i], s=s, linewidths= linewidth, marker = '$'+marker[i]+'$' )
+    #ax.set_xlabel('dim 1')
+    #ax.set_ylabel('dim 2')
     ax.set_title(title)
     #ax.xaxis.set_major_formatter(NullFormatter())
     #ax.yaxis.set_major_formatter(NullFormatter())
+    fig.patch.set_visible(False)
+    ax.axis('off')
     if label:
-        plt.legend(*scatter.legend_elements(), loc="lower right", title='Labels', prop={'size': 6}, fancybox=True)
+        plt.legend(*scatter.legend_elements(), loc="upper right", title='Labels', prop={'size': 6}, fancybox=True)
     fig.tight_layout()
+    if save_path != None:
+        plt.savefig(save_path)
     plt.show()
+
+def make_dir(file_path):
+    split = file_path.rsplit('/',1)
+    dir = split[0]
+    import os
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    return split
