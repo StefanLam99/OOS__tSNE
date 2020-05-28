@@ -5,6 +5,7 @@ from sklearn import datasets
 from sklearn.preprocessing import normalize
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
+from matplotlib import cm
 from datasets import Dataset
 from utils import plot
 import cProfile
@@ -21,11 +22,14 @@ def mainMNIST():
     '''
     seed = 0
     grad_method = 'ADAM'
+    if grad_method == 'ADAM':
+        lr = 0.5
+    else: lr = 500
     dataset = Dataset(seed)
     X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=6000)
     X = X_train
     y = y_train
-    model = tsne(random_state=0, grad_method=grad_method, perplexity=40, max_iter=1000, data_name='MNIST')
+    model = tsne(random_state=0, grad_method=grad_method, perplexity=40, max_iter=1000, data_name='MNIST', learning_rate=lr)
     Y = model.transform(X)
     plot(Y, y)
 def mainIRIS():
@@ -58,6 +62,22 @@ def mainCoil20():
     Y = model.transform(X)
     plot(Y, y, cmap='tab20b')
 
+def mainLETTER():
+    seed = 0
+    grad_method = 'ADAM'
+    dataset = Dataset(seed)
+    X, y, X_train, y_train, X_test, y_test = dataset.get_LETTER_data(n_train=6000)
+
+    model = tsne(learning_rate=0.5,random_state=seed, data_name='COIL20', grad_method=grad_method, perplexity=40, max_iter=1000)
+    Y = model.transform(X)
+    alphabet = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
+                'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+    cmap = cm.get_cmap('gist_earth', len(alphabet))
+
+    for i, letter in enumerate(alphabet):
+        plt.scatter(Y[:, 0][y_train == i + 1], Y[:, 1][y_train == i + 1], s=20, c=np.array(cmap(i)),
+                    marker='$' + letter + '$', linewidths=0.2)
+    plt.show()
 if __name__ == '__main__':
     mainMNIST()
     #mainIRIS()

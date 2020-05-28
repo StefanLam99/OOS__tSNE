@@ -3,16 +3,17 @@
 
 import numpy as np
 from sklearn.preprocessing import normalize
-
+from keras.datasets import cifar10
 class Dataset:
 
     def __init__(self, seed):
         self.seed = seed
 
 
+
     def get_MNIST_data(self, n_train = 3000, n_test = 1000):
         '''
-        Preprocess and load MNIST datasets, consisting hand written
+        Preprocess and load MNIST datasets, consisting of grayscale imaged of hand written
         integers from 0-9 made out of 28*28 pixels with RGB values up till 255.
         train set has 60000 samples
         test set has 10000 samples
@@ -36,6 +37,47 @@ class Dataset:
 
         return X, y, X_train, y_train, X_test, y_test
 
+    def get_CIFAR10_data(self, n_train = 3000, n_test = 1000):
+        '''
+        Preprocess and load CIFAR10 dataset, consisting of color images of 10 different objects
+        integers from 0-9 made out of 28*28*3 pixels with RGB values up till 255.
+        has 50000 samples, first column are the labels
+        '''
+        np.random.seed(self.seed)
+        print('loading and preprocessing CIFAR10 data...')
+        data_train = np.genfromtxt('data/CIFAR10/cifar10_data.csv', delimiter=',')
+        X = data_train[:, 1:].astype(np.float32, copy=False)
+        y = data_train[:,0]
+
+        y_train = data_train[0:n_train, 0]
+        X_train = data_train[0:n_train, 1:]
+        X_train.astype(np.float32, copy=False)
+        X_train = X_train/ 255 # RGB values are max 255
+
+        data_test = np.genfromtxt('data/MNIST/mnist_test.csv', delimiter=',')
+        y_test = data_test[0:n_test, 0]
+        X_test = data_test[0:n_test, 1:]
+        X_test.astype(np.float32, copy=False)
+        X_test = X_test/ 255 # RGB values are max 255
+
+        return X, y, X_train, y_train, X_test, y_test
+
+    def get_LETTER_data(self, n_train = 6000, n_test = 1000):
+        np.random.seed(self.seed)
+        print('loading and preprocessing LETTER data...')
+        data = np.genfromtxt('data/LETTER/letter_data.csv', delimiter=',')
+        np.random.shuffle(data)
+        X = data[:, 1:].astype(np.float32, copy=False)
+        X = normalize(X)
+        y = data[:,0]
+
+        y_train = data[0:n_train, 0]
+        X_train = data[0:n_train, 1:]
+
+        y_test = data[n_train:n_train+n_test, -1].astype(np.uint32, copy = False)
+        X_test = data[n_train:n_train+n_test, 0:-1].astype(np.float32, copy=False)
+
+        return X, y, X_train, y_train, X_test, y_test
 
     def get_IRIS_data(self, n_train = 100, n_test = 50):
         '''

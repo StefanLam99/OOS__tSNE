@@ -183,9 +183,9 @@ def gauss_kernel(x, X, sigma):
         k[i] = np.exp(-(np.linalg.norm(x - X[i,:])**2)/(2.*sigma[i]))
     return k
 
-def plot(Y, labels, title='', label = True, cmap = 'Paired', s=8):
+def plot(Y, labels, title='', label = True, cmap = 'Paired', s=15):
     fig, ax = plt.subplots()
-    scatter = ax.scatter(Y[:, 0], Y[:, 1], c=labels, cmap=cmap, s=s)
+    scatter = ax.scatter(Y[:, 0], Y[:, 1], c=labels,  s=s, marker='$K$')
     ax.set_xlabel('dim 1')
     ax.set_ylabel('dim 2')
     ax.set_title(title)
