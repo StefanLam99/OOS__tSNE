@@ -1,107 +1,30 @@
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
 from time import time
 import numpy as np
 from tensorflow import keras
 from utils import blockPrint, enablePrint
 from tSNE import cond_probs, joint_average_P, joint_Q, pca
-'''
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Activation
-from tensorflow.keras import initializers
-'''
-begin = time()
-data = np.genfromtxt('data/mnist_train.csv', delimiter=',')
-n_sample = 2000
-labels = data[0:n_sample, 0]
-batch_size = 200
-X = data[0:n_sample, 1:]
-X.astype(np.float32, copy=False)
-X = X / 255
-x_pca = pca(X, 30).real
-d = 2
+from autoencoder import *
+from datasets import Dataset
+from  neural_tSNE import *
+layer_dim = [784,500,500,2000, 2]
+seed = 0
+dataset = Dataset(seed)
+X, y , X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=500)
+RBM = Autoencoder(layer_dim)
+RBM.pretrain(X_train.T, epochs=15)
+RBM.save('Models/test')
+autoencoder, encoder, decoder = RBM.unroll()
+encoder.summary()
+model = neural_tSNE()
+model.load_model(encoder)
+model.train(X_train)
+model.save('Models/testENCODER')
 
 
 
-#Q = tf.zeros((batch_size,batch_size))
-
-#neural network
-
-x = tf.placeholder(tf.float32, [None, 784], name='x')
-y = tf.placeholder(tf.float32, [None, d], name='y')
-P = tf.placeholder(tf.float32, [batch_size,batch_size], name='P')
-
-W1 = tf.Variable(tf.truncated_normal([784, 500], mean=0, stddev=1 ),name='W1')
-b1 = tf.Variable(tf.truncated_normal([500], mean=0, stddev=1), name='b1')
-y1 = tf.nn.relu((tf.matmul(x, W1) + b1), name='activationLayer1')
-
-W2 = tf.Variable(tf.truncated_normal([500, 500], mean=0, stddev=1 ),name='W2')
-b2 = tf.Variable(tf.truncated_normal([500], mean=0, stddev=1), name='b2')
-y2 = tf.nn.relu((tf.matmul(y1, W2) + b2), name='activationLayer2')
-
-W3 = tf.Variable(tf.truncated_normal([500, 2000], mean=0, stddev=1 ),name='W3')
-b3 = tf.Variable(tf.truncated_normal([2000], mean=0, stddev=1), name='b3')
-y3 = tf.nn.relu((tf.matmul(y2, W3) + b3), name='activationLayer3')
-
-#output layer
-Wo = tf.Variable(tf.random_normal([2000, d], mean=0, stddev=1 ),name='Wo')
-bo = tf.Variable(tf.random_normal([d], mean=0, stddev=1), name='bo')
-yo = tf.nn.relu(tf.matmul(y3, Wo)+bo, name='outputlayer')
-
-def kl_loss(P, y_pred):
-    '''
-    test = y_pred.eval()
-    Q = joint_Q(test)
-    Q = tf.convert_to_tensor(Q, np.float32)
-    '''
-
-
-    sum_sq = tf.reduce_sum(tf.square(y_pred), 1)
-    num = tf.multiply(-2. , tf.tensordot(y_pred, tf.transpose(y_pred), 1))
-    num = tf.divide(1.,tf.add(1.,tf.add(tf.transpose(tf.add(num,sum_sq)), sum_sq)))
-    print(num)
-    tf.matrix_set_diag(num, tf.zeros(batch_size))
-    Q = tf.divide(num, tf.reduce_sum(num))
-
-
-    return tf.reduce_sum(tf.multiply(P,tf.log(tf.divide(P,Q))))
-
-loss = kl_loss(P, yo)
-
-train_step = tf.train.AdamOptimizer(learning_rate=0.001, name='Adam').minimize(loss)
-init_op = tf.global_variables_initializer()
-
-
-training_epochs = 100
-with tf.Session() as sess:
-    # ***initialization of all variables... NOTE this must be done before running any further sessions!***
-    sess.run(init_op)
-
-    # training loop over the number of epochs
-    batches = int(len(X) / batch_size)
-    for epoch in range(training_epochs):
-        losses = 0
-
-        for j in range(batches):
-            idx = np.random.randint(X.shape[0], size=batch_size)
-            X_b = X[idx]
-            blockPrint()
-            Pb = cond_probs(X=X_b, perplexity=30)
-            Pb = joint_average_P(Pb)
-            enablePrint()
 
 
 
-            sess.run(train_step, feed_dict={x: X_b, P: Pb})
-            W1, kld = sess.run([W1, loss], feed_dict={x: X_b, P: Pb})
-            print(kld)
-            print(W1)
-            losses = losses + np.sum(kld)
 
-
-        print("Epoch %d " % epoch, "avg train loss over", batches, " batches ", "%.4f" % (losses / batches))
-
-end = time()
-print("the training took: %.2f" %(end - begin))
 
 

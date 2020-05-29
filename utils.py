@@ -184,15 +184,21 @@ def gauss_kernel(x, X, sigma):
         k[i] = np.exp(-(np.linalg.norm(x - X[i,:])**2)/(2.*sigma[i]))
     return k
 
-def plot(Y, labels, title='',marker = None ,label = False, cmap = 'Paired', s=15, save_path=None, linewidth=1):
+def plot(Y, labels, title='',marker = None ,label = False, cmap= None, s=15, save_path=None, linewidth=1):
     fig, ax = plt.subplots()
 
     if marker == None:
-        scatter = ax.scatter(Y[:, 0], Y[:, 1], c=labels,cmap=cmap , s=s)
+        scatter = ax.scatter(Y[:, 0], Y[:, 1], c=labels, cmap = cmap, s=s)
+        ''' 
+        for i, label in enumerate(labels):
+            if i <=10:
+                scatter = ax.scatter(Y[:, 0][labels== label], Y[:, 1][labels==label], c=cmap(i) , s=s)
+            else:
+                scatter = ax.scatter(Y[:, 0][labels == label], Y[:, 1][labels == label], c=cmap(i), cmap=cmap, s=s, marker = '$+$')
+                '''
     else:
         cmap = cm.get_cmap(cmap, len(marker))
         for i, e in enumerate(marker):
-
             ax.scatter(Y[:,0][labels==i], Y[:,1][labels==i], s=s, linewidths= linewidth, marker = '$'+marker[i]+'$' )
     #ax.set_xlabel('dim 1')
     #ax.set_ylabel('dim 2')
