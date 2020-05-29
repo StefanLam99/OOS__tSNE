@@ -189,17 +189,10 @@ def plot(Y, labels, title='',marker = None ,label = False, cmap= None, s=15, sav
 
     if marker == None:
         scatter = ax.scatter(Y[:, 0], Y[:, 1], c=labels, cmap = cmap, s=s)
-        ''' 
-        for i, label in enumerate(labels):
-            if i <=10:
-                scatter = ax.scatter(Y[:, 0][labels== label], Y[:, 1][labels==label], c=cmap(i) , s=s)
-            else:
-                scatter = ax.scatter(Y[:, 0][labels == label], Y[:, 1][labels == label], c=cmap(i), cmap=cmap, s=s, marker = '$+$')
-                '''
     else:
         cmap = cm.get_cmap(cmap, len(marker))
         for i, e in enumerate(marker):
-            ax.scatter(Y[:,0][labels==i], Y[:,1][labels==i], s=s, linewidths= linewidth, marker = '$'+marker[i]+'$' )
+            ax.scatter(Y[:,0][labels==i], Y[:,1][labels==i], c =np.array([cmap(i)]), s=s, linewidths= linewidth, marker = '$'+marker[i]+'$' )
     #ax.set_xlabel('dim 1')
     #ax.set_ylabel('dim 2')
     ax.set_title(title)

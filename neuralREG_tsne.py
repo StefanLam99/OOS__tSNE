@@ -34,7 +34,7 @@ class neuralREG_tSNE:
 
     def build(self, n_input, layer_sizes = np.array([500, 500, 2000]), activations= np.array(['sigmoid','sigmoid','sigmoid'])):
         ''''
-        builds the structure for the regularized parametric t-sne network
+        builds the structure for the regularized parametric t-sne network: autoencoder
         '''
         if self.model is not None:
             self.model = None
@@ -57,7 +57,7 @@ class neuralREG_tSNE:
         autoencoder = Model(input, output=[encoded,decoded])
         self.encoder = Model(input, encoded)
         encoded_input = Input(shape=(layer_sizes[0],))
-        decoder_layer = autoencoder.layers[-1]
+        decoder_layer = autoencoder._layers[-1]
         self.decoder = Model(encoded_input, decoder_layer(encoded_input))
 
         autoencoder.compile(loss={'encoded': self.kl_loss, 'decoded': self.mse_loss}, optimizer=Adam(self.lr),

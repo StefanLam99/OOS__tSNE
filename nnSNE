@@ -4,6 +4,8 @@ from tensorflow import keras
 from utils import blockPrint, enablePrint
 from tSNE import cond_probs, joint_average_P, joint_Q, pca
 from autoencoder import *
+from keras.models import load_model
+from utils import plot
 from datasets import Dataset
 from  neural_tSNE import *
 layer_dim = [784,500,500,2000, 2]
@@ -11,18 +13,24 @@ seed = 0
 dataset = Dataset(seed)
 X, y , X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=500)
 RBM = Autoencoder(layer_dim)
-RBM.pretrain(X_train.T, epochs=15)
-RBM.save('Models/test')
+#RBM.pretrain(X_train.T, epochs=15)
+#RBM.save('Models/test')
+RBM = RBM.pretrained_from_file('Models/test')
+
 autoencoder, encoder, decoder = RBM.unroll()
 encoder.summary()
-model = neural_tSNE()
-model.load_model(encoder)
-model.train(X_train)
-model.save('Models/testENCODER')
+autoencoder.summary()
+decoder.summary()
+neural_model = neural_tSNE(epochs=100)
+neural_model.build_nn(784)
+#neural_model.load_model(encoder)
+neural_model.train(X_train)
+neural_model.save('Models/testENCODERnoRBM')
+#model = load_model('Models/testEncoder')
 
-
-
-
+#neural_model.load_model(model)
+Y = neural_model.predict(X_train)
+plot(Y, y_train)
 
 
 

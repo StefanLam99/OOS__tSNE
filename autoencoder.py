@@ -117,7 +117,7 @@ class Autoencoder:
         inputs = Input(shape=(self.v_dim,))
         x = inputs
 
-        # build encoder 
+        # build encoder part
         for i in range(self.num_hidden_layers):
             weights = [self.W[i], self.b[i].flatten()]
             if (i == self.num_hidden_layers - 1):
@@ -129,18 +129,24 @@ class Autoencoder:
                           activation='sigmoid',
                           weights=weights)(x)
 
-        # build decoder
+        # build decoder part
+
         for i in range(self.num_hidden_layers):
             weights = [self.W[self.num_hidden_layers - i - 1].T, self.a[self.num_hidden_layers - i - 1].flatten()]
-
             x = Dense(self.layer_dims[self.num_hidden_layers - i - 1],
                       activation='sigmoid',
                       weights=weights)(x)
 
-        encoder = Model(inputs, encoded)
-        encoded_input = Input(shape=(self.layer_dims[0],))
-        decoder = Model(encoded_input, x)
         autoencoder = Model(inputs, x)
+        encoder = Model(inputs, encoded)
+        # make decoder
+        encoded_input = Input(shape=(self.layer_dims[-1],))
+        decoded = encoded_input
+        for i in range(len(self.layer_dims)-1):
+            decoded = autoencoder._layers[len(self.layer_dims)+i](decoded)
+
+        decoder = Model(encoded_input, decoded)
+
         return autoencoder, encoder, decoder
 
     def save(self, filename):
