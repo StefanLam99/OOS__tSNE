@@ -46,19 +46,18 @@ class Dataset:
         np.random.seed(self.seed)
         print('loading and preprocessing CIFAR10 data...')
         data_train = np.genfromtxt('data/CIFAR10/cifar10_data.csv', delimiter=',')
-        X = data_train[:, 1:].astype(np.float32, copy=False)
+        X = data_train[:, 1:].astype(np.float32, copy=False)/255
         y = data_train[:,0]
 
         y_train = data_train[0:n_train, 0]
-        X_train = data_train[0:n_train, 1:]
-        X_train.astype(np.float32, copy=False)
-        X_train = X_train/ 255 # RGB values are max 255
+        X_train = X[0:n_train, 1:]
+
 
         data_test = np.genfromtxt('data/MNIST/mnist_test.csv', delimiter=',')
         y_test = data_test[0:n_test, 0]
-        X_test = data_test[0:n_test, 1:]
-        X_test.astype(np.float32, copy=False)
-        X_test = X_test/ 255 # RGB values are max 255
+        X_test = X[0:n_test, 1:]
+
+
 
         return X, y, X_train, y_train, X_test, y_test
 
@@ -118,7 +117,7 @@ class Dataset:
         '''
         preproces and load coil20 data consisting of images of 20 different objects
         taken at 72 different angels. The images are 32x32 = 1024 pixels. The dataset
-        is already normalized, and it contains 20*72 = 1040 samples. The last columns
+        is already normalized, and it contains 20*72 = 1440 samples. The last columns
         is the label (1-20) of the object .
         '''
         np.random.seed(self.seed)

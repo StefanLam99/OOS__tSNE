@@ -1,5 +1,5 @@
 # Implementation of t-SNE, for reference see (Maaten & Hinton 2009)
-# In addition I implement the original t-SNE als with ADAM gradient descent
+# In addition I implement the original t-SNE also with ADAM gradient descent
 # author: Stefan Lam
 import numpy as np
 from time import time
@@ -172,7 +172,7 @@ class tsne:
 
         if(self.initialization is "PCA"):
             print("First reducing dimensions of X with PCA to %.2f dimensions" %(self.initial_dims))
-            X = pca(X, self.initial_dims).real
+            X, _ = pca(X, self.initial_dims)
 
 
         (n, d) = X.shape

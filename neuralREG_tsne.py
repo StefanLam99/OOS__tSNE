@@ -16,7 +16,7 @@ from utils import *
 from autoencoder import Autoencoder
 class neuralREG_tSNE:
     def __init__(self, data_name ='',d_components=2,  perplexity=40., epochs=100, lr=0.001, random_state=0, batch_size=100,encoder=None, decoder=None,
-                 model=None, labda=0.99):
+                 model=None, labda=0.99, toTrain = True):
         self.d_components = d_components
         self.perplexity = perplexity
         self.data_name = data_name
@@ -29,8 +29,12 @@ class neuralREG_tSNE:
         self.encoder = encoder
         self.decoder = decoder
         self.labda = labda
-        #keras.losses.kl_loss = self.kl_loss
-
+        ''' 
+        if toTrain is False:
+            #keras.losses.kl_loss = self.kl_loss
+            keras.losses.kl_loss = self.mse_loss
+            keras.losses.kl_loss = mse
+        '''
 
     def build(self, n_input, layer_sizes = np.array([500, 500, 2000]), activations= np.array(['sigmoid','sigmoid','sigmoid'])):
         ''''
@@ -59,11 +63,9 @@ class neuralREG_tSNE:
         encoded_input = Input(shape=(layer_sizes[0],))
         decoder_layer = autoencoder._layers[-1]
         self.decoder = Model(encoded_input, decoder_layer(encoded_input))
-
-        autoencoder.compile(loss={'encoded': self.kl_loss, 'decoded': self.mse_loss}, optimizer=Adam(self.lr),
-                            loss_weights= [self.labda, 1 - self.labda])
-
         self.model = autoencoder
+
+        self.set_compiler()
 
 
     def train(self, X_train):
@@ -80,27 +82,33 @@ class neuralREG_tSNE:
         for epoch in range(self.epochs):
             new_indices = np.random.permutation(n_sample) # shuffle data for new random batches
             X = X_train[new_indices]
-            loss = np.zeros(3)
+            loss = 0
 
             for i in range(nBatches):
 
                 batch = X[i*self.batch_size:(i+1)*self.batch_size]
-                if int(self.labda) > 0:
+                if self.labda > 0: # runs faster this way
                     blockPrint()
                     cond_p, _ = cond_probs(batch.copy(), perplexity=self.perplexity)
                     P = joint_average_P(cond_p)
                     enablePrint()
-                    all_losses = self.model.train_on_batch(x=batch, y={'encoded': P, 'decoded': batch})
-                else: # runs faster
-                    all_losses = self.model.train_on_batch(x=batch, y={'encoded': np.zeros((500,500)), 'decoded': batch})
+                    if self.labda == 1: # parametric t-sne
+                        all_losses = self.encoder.train_on_batch(x=batch, y={'encoded': P})
+                    else: # regularized parametric t-sne
+                        all_losses = self.model.train_on_batch(x=batch, y={'encoded': P, 'decoded': batch})
+                else: # autoencoder with mse loss
+                    all_losses = self.model.train_on_batch(x=batch, y={'decoded': batch})
+
                 loss += np.array(all_losses)
+
 
             losses.append(loss/nBatches)
             #losses[epoch] = loss/nBatches
-            print('Epoch: %.d losses: %.3f| %.3f| %.3f elapsed time: %.2f' % (
-            epoch + 1, losses[epoch][0],losses[epoch][1], losses[epoch][2],time() - begin))
+            print('Epoch: %.d elapsed time: %.2f losses: %s ' % (
+            epoch + 1,time() - begin), losses[epoch])
 
         return losses
+
     def predict(self, X):
         """
         Makes prediction for a given data set X nxD with the autoencoder
@@ -108,12 +116,15 @@ class neuralREG_tSNE:
         if self.model == None:
             print("Train the model first!")
             return
-        return self.model.predict(X)
+        Y = self.model.predict(X)
+        return {'encoded': Y[0], 'decoded': Y[1]}
+
     def predict_encoder(self, X):
         if self.encoder == None:
-            print("Train the model first!")
+            print("Load the encoder first!")
             return
         return self.encoder.predict(X)
+
     def predict_decoder(self, X):
         if self.encoder == None:
             print("Train the model first!")
@@ -122,14 +133,32 @@ class neuralREG_tSNE:
 
     # loading functions:
     def load_model(self, file_path):
-        self.model = load_model(file_path)
+
+        # setting up the autoencoder
+        self.model = load_model(file_path, custom_objects={'kl_loss': self.kl_loss, 'mse_loss': self.mse_loss})
+        self.set_compiler()
+
+        # acces the encoder and decoder of the autoencoder:
+        n_encoder_layers = int(len(self.model._layers)/2) + 1
+
+        self.encoder = Model(self.model.input, self.model.layers[n_encoder_layers-1].output)
+        self.encoder.compile(loss={'encoded': self.kl_loss}, optimizer=Adam(self.lr))
+        decoder_input = Input(shape=(self.d_components,))
+        decoded = decoder_input
+        for i in range(n_encoder_layers-1):
+
+            decoded = self.model._layers[n_encoder_layers+i](decoded)
+        self.decoder = Model(decoder_input, decoded)
     def load_encoder(self, file_path):
         self.encoder = load_model(file_path)
+
     def load_decoder(self, file_path):
         self.decoder = load_model(file_path)
-    #losses
+
+    # losses
     def mse_loss(self, X, Y):
         return mse(X,Y)
+
     def kl_loss(self,P, Y):
         # calculate neighbor distribution Q (t-distribution) from Y
         d = self.d_components
@@ -154,13 +183,22 @@ class neuralREG_tSNE:
 
         return C
 
-    def save(self, dir=None):
+    def set_compiler(self):
+        if self.labda == 1:
+            self.model.compile(loss={'encoded': self.kl_loss}, optimizer=Adam(self.lr))
+        elif self.labda == 0:
+            self.model.compile(loss = {'decoded': self.mse_loss}, optimizer=Adam(self.lr))
+        else:
+            self.model.compile(loss={'encoded': self.kl_loss, 'decoded': self.mse_loss}, optimizer=Adam(self.lr),
+                                loss_weights=[self.labda, 1 - self.labda])
+    def save(self, file_path=None):
         if dir==None:
-            print("Directory not specified!")
+            print("File_path not specified!")
             return
-        self.model.save(dir+'/autoencoder'+self.data_name)
-        self.encoder.save(dir+'/encoder'+self.data_name)
-        self.decoder.save(dir+'/decoder'+self.data_name)
+        self.model.save(file_path)
+        #self.model.save(dir+'/autoencoder'+self.data_name)
+        #self.encoder.save(dir+'/encoder'+self.data_name)
+        #self.decoder.save(dir+'/decoder'+self.data_name)
 
 
 if __name__ == '__main__':

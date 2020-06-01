@@ -47,6 +47,24 @@ def shannon_entropy(Di, sigma=1.0):
     # print('H: ' + str(H))
     return Hi, Pi
 
+def distance_matrix_squared(X):
+    '''
+    Computes distances of a matrix column wise, according to squared euclidian distance
+    '''
+
+    sum_X_squared = np.sum(np.square(X), 1)
+    D = np.add(np.add(-2 * np.dot(X, X.T), sum_X_squared).T, sum_X_squared)  # distance matrix squared
+    return D
+
+def distance_matrix(X):
+    '''
+    Computes distances of a matrix column wise, according to euclidian distance
+    '''
+
+    sum_X_squared = np.sum(np.square(X), 1)
+    D = np.add(np.add(-2 * np.dot(X, X.T), sum_X_squared).T, sum_X_squared)  # distance matrix squared
+    D = np.maximum(D,1e-12)
+    return np.nan_to_num(np.sqrt(D))
 def cond_probs(X=np.array([]), tol=1e-5, perplexity=30):
     """
     Find the conditional probabilities Pj|i such that each gaussian
@@ -62,8 +80,7 @@ def cond_probs(X=np.array([]), tol=1e-5, perplexity=30):
 
     print("computing pairwaise distances...")
     t0 = time()
-    sum_X_squared = np.sum(np.square(X), 1)
-    D = np.add(np.add(-2 * np.dot(X, X.T), sum_X_squared).T, sum_X_squared)  # distance matrix
+    D = distance_matrix_squared(X)
     print("Computing pairwise distances took %8.2f seconds" % (time() - t0))
 
     print("starting binary search...")
@@ -158,31 +175,152 @@ def pca(X=np.array([]), no_dims=50):
     t0 = time()
     (n, d) = X.shape
     X = X - np.tile(np.mean(X, 0), (n, 1))
-    (l, M) = np.linalg.eig(np.dot(X.T, X))
-    Y = np.dot(X, M[:, 0:no_dims])
+    (l, M) = np.linalg.eig(np.dot(X.T, X)) # eigenvalues, and ``eigenmatrix''
+    Y = np.dot(X, M[:, 0:no_dims]).real
     print("Reducing dimension of data with PCA took: %8.2f seconds" % (time() - t0))
-    return Y
+    return Y, M
 
 def gauss_kernel(x, X, sigma):
     '''
     Calculates the gaussian kernel function for each
     row of X respect to x. sigma is calculated via
     the binary search and perplexity.
-        (m, d) = x.shape
+    (m, d) = x.shape
     (n, D) = X.shape
-
 
     '''
     (n, D) = X.shape
-    '''' 
-    x = x.reshape((1, D))
-    k = np.exp(-(np.sum((x - X)**2, axis=1)**2))/(2.*sigma.reshape((1,n)))
-    '''
+
     k = np.zeros(n)
 
     for i in range(n):
         k[i] = np.exp(-(np.linalg.norm(x - X[i,:])**2)/(2.*sigma[i]))
     return k
+
+
+def rank_matrix2(x):
+    """Returns rank matrix from pairwise distance matrix a"""
+
+    m = x.argsort()
+    r = np.zeros(x.shape)
+
+    vectors = x.shape[0]
+
+    for i in range(vectors):
+        for j in range(vectors):
+            pos = np.where(m[i, :] == j)
+            r[i, j] = pos[0][0] # there should be a better syntax for this
+
+    return r.astype('int')
+def rank_matrix(X):
+    '''
+    Computes the rank matrix for the pairwise distances of X, rows are in ascending order, according to paiwrise distances
+    '''
+    (n, m) = X.shape
+
+    D = distance_matrix(X)
+
+
+    sorted = D.argsort()
+    ranks = np.zeros(D.shape)
+    indices = np.r_[0:n]
+    for i in range(n):
+        ranks[i,sorted[i,:]] = indices
+
+    return ranks.astype(np.int), D
+@profile
+def trustworthniness(X, y, k_neighbors):
+    '''
+    Calculates the trustworthiness of a DR technique, it can be
+    seen as the "precision".
+    :param X: high dimensional space
+    :param y: low dimensional space
+    :param n_neighbors: list of numbers, for which you want to calculate the trustworthiness
+    '''
+    (n, m) = X.shape
+
+    rank_X, dist_X = rank_matrix(X)
+    dist_y = distance_matrix(y)
+
+    dist_X = np.argsort(dist_X)
+    dist_y = np.argsort(dist_y)
+
+    trusts = np.zeros(len(k_neighbors))
+    for l, k in enumerate(k_neighbors):
+        X_neighbors = dist_X[:,1:k+1] # we don't count (i,i) as a neighbor
+        y_neighbors = dist_y[:,1:k+1]
+
+        # computing the set U of elements in projection space but not in input space
+        U = []
+        for i in range(n):
+            neighbors = []
+            for neighbor in y_neighbors[i,:]: # add the neighbors of y which are not neighbors of X to the set U
+                if neighbor not in X_neighbors[i,:]:
+                    neighbors.append(neighbor)
+
+            U.append(neighbors)
+
+        # computing trustworthiness for the given k_neighbors
+        sum = 0
+        for i in range(n):
+            for j in U[i]:
+
+                sum = sum + (rank_X[i,j] - k)
+
+        if k < (n/2.0):
+            scaler = 2/((n*k)*(2*n - 3*k - 1))
+        else:
+            scaler =  2/(n * (n - k) * (n - k - 1)) # this won't happen probably, in my case but it's the correct formula
+
+        trusts[l] = 1 - sum * scaler
+
+    return trusts
+
+def continuity(X, y, k_neighbors):
+    '''
+    Calculates the continuity of a DR technique, it can be
+    seen as the "recall".
+    :param X: high dimensional space
+    :param y: low dimensional space
+    :param n_neighbors: list of numbers, for which you want to calculate the trustworthiness
+    '''
+    (n, m) = X.shape
+
+    dist_X = distance_matrix(X)
+    rank_y, dist_y = rank_matrix(y)
+
+    dist_X = np.argsort(dist_X)
+    dist_y = np.argsort(dist_y)
+
+    continuities = np.zeros(len(k_neighbors))
+    for l, k in enumerate(k_neighbors):
+        X_neighbors = dist_X[:,1:k+1] # we don't count (i,i) as a neighbor
+        y_neighbors = dist_y[:,1:k+1]
+
+        # computing the set U of elements in projection space but not in input space
+        V = []
+        for i in range(n):
+            neighbors = []
+            for neighbor in X_neighbors[i,:]: # add the neighbors of X which are not neighbors of y to the set V
+                if neighbor not in y_neighbors[i,:]:
+                    neighbors.append(neighbor)
+
+            V.append(neighbors)
+
+        # computing trustworthiness for the given k_neighbors
+        sum = 0
+        for i in range(n):
+            for j in V[i]:
+                sum = sum + (rank_y[i,j] - k)
+
+        if k < (n/2.0):
+            scaler = 2/((n*k)*(2*n - 3*k - 1))
+        else:
+            scaler =  2/(n * (n - k) * (n - k - 1)) # this won't happen probably, in my case but it's the correct formula
+
+        continuities[l] = 1 - sum * scaler
+
+    return continuities
 
 def plot(Y, labels, title='',marker = None ,label = False, cmap= None, s=15, save_path=None, linewidth=1):
     fig, ax = plt.subplots()
@@ -213,4 +351,4 @@ def make_dir(file_path):
     import os
     if not os.path.exists(dir):
         os.makedirs(dir)
-    return split
+

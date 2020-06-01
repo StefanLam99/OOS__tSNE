@@ -16,7 +16,7 @@ from utils import *
 from autoencoder import Autoencoder
 class neural_tSNE:
     def __init__(self, d_components=2, perplexity=40., epochs=100, lr=0.01, random_state=0, batch_size=100, model=None, labda=0.99):
-        #keras.losses.kl_loss = self.kl_loss # otherwise keras won't recognize this loss function
+
         self.d_components = d_components
         self.perplexity = perplexity
         self.epochs = epochs
@@ -74,8 +74,8 @@ class neural_tSNE:
                 loss += self.model.train_on_batch(batch, P)
 
             losses[epoch] = loss/nBatches
-            print('Epoch: %.d loss: %.3f elapsed time: %.2f' % (
-            epoch + 1, losses[epoch], time() - begin))
+            print('Epoch: %.d elapsed time: %.2f loss: %.3f ' % (
+            epoch + 1, time() - begin, losses[epoch]))
 
         return losses
     def predict(self, X):
@@ -87,8 +87,9 @@ class neural_tSNE:
             return
         return self.model.predict(X)
 
-    def load_model(self, model):
-        self.model = model
+    def load_model(self, file_path):
+        #keras.losses.kl_loss = self.kl_loss  # otherwise keras won't recognize this loss function
+        self.model = load_model(file_path, custom_objects={'kl_loss': self.kl_loss})
         self.model.compile(loss=self.kl_loss, optimizer=Adam(self.lr))
 
 
@@ -120,5 +121,6 @@ class neural_tSNE:
         if file_path==None:
             print("No file path specified!")
             return
+        make_dir(file_path)
         self.model.save(file_path)
 

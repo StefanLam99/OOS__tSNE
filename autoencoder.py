@@ -118,42 +118,47 @@ class Autoencoder:
         x = inputs
 
         # build encoder part
-        for i in range(self.num_hidden_layers):
+        for i in range(self.num_hidden_layers - 1):
             weights = [self.W[i], self.b[i].flatten()]
-            if (i == self.num_hidden_layers - 1):
-                encoded = Dense(self.layer_dims[i + 1],
-                          weights=weights, activation='linear')(x)
-                x = encoded
-            else:
-                x = Dense(self.layer_dims[i + 1],
-                          activation='sigmoid',
-                          weights=weights)(x)
+            x = Dense(self.layer_dims[i + 1],
+                      activation='sigmoid',
+                      weights=weights)(x)
 
+        weights = [self.W[self.num_hidden_layers-1], self.b[self.num_hidden_layers-1].flatten()]
+        encoded = Dense(self.layer_dims[self.num_hidden_layers],
+                  weights=weights, activation='linear', name='encoded')(x)
+        x = encoded
         # build decoder part
 
         for i in range(self.num_hidden_layers):
             weights = [self.W[self.num_hidden_layers - i - 1].T, self.a[self.num_hidden_layers - i - 1].flatten()]
-            x = Dense(self.layer_dims[self.num_hidden_layers - i - 1],
-                      activation='sigmoid',
-                      weights=weights)(x)
+            if (i == self.num_hidden_layers -1):
+                x = Dense(self.layer_dims[self.num_hidden_layers - i - 1],
+                          activation='sigmoid',
+                          weights=weights, name='decoded')(x)
+            else:
+                x = Dense(self.layer_dims[self.num_hidden_layers - i - 1],
+                          activation='sigmoid',
+                          weights=weights)(x)
 
-        autoencoder = Model(inputs, x)
+
+
+        autoencoder = Model(inputs, output=[encoded, x])
         encoder = Model(inputs, encoded)
         # make decoder
-        encoded_input = Input(shape=(self.layer_dims[-1],))
-        decoded = encoded_input
+        decoder_input = Input(shape=(self.layer_dims[-1],))
+        decoded = decoder_input
+
         for i in range(len(self.layer_dims)-1):
             decoded = autoencoder._layers[len(self.layer_dims)+i](decoded)
 
-        decoder = Model(encoded_input, decoded)
+        decoder = Model(decoder_input, decoded)
 
         return autoencoder, encoder, decoder
 
     def save(self, filename):
         '''
-            saves the pretrained weights. Saving and loading a keras model 
-            after pretraining is better done directly to the self.autoencoder
-            object using the keras fnctions save() and load_model()
+        Saving the weights of the pretrained RBM
         '''
 
         if self.pretrained == True:
