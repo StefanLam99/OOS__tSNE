@@ -92,6 +92,16 @@ class neural_tSNE:
         self.model = load_model(file_path, custom_objects={'kl_loss': self.kl_loss})
         self.model.compile(loss=self.kl_loss, optimizer=Adam(self.lr))
 
+    def load_RBM(self, file_path, layer_sizes):
+        '''
+        load the autoencoder via the RBMs
+        '''
+        RBM = Autoencoder(layer_sizes)
+        RBM = RBM.pretrained_from_file(file_path)
+        self.model = RBM.unroll()
+
+        self.model.compile(loss= self.kl_loss, optimizer=Adam(self.lr))
+
 
     def kl_loss(self,P, Y):
         # calculate neighbor distribution Q (t-distribution) from Y
