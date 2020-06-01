@@ -10,6 +10,7 @@ from keras.layers.convolutional import Convolution2D, MaxPooling2D, Conv2D
 from keras.optimizers import Adam, SGD
 from keras.datasets import mnist
 from math import ceil
+from RBM import RBM
 from keras.losses import mse, binary_crossentropy
 import keras.losses
 from utils import *
@@ -133,7 +134,9 @@ class neuralREG_tSNE:
 
     # loading functions:
     def load_model(self, file_path):
-
+        '''
+        load the autoencoder
+        '''
         # setting up the autoencoder
         self.model = load_model(file_path, custom_objects={'kl_loss': self.kl_loss, 'mse_loss': self.mse_loss})
         self.set_compiler()
@@ -149,6 +152,16 @@ class neuralREG_tSNE:
 
             decoded = self.model._layers[n_encoder_layers+i](decoded)
         self.decoder = Model(decoder_input, decoded)
+    def load_RBM(self, file_path, layer_sizes):
+        '''
+        load the autoencoder via the RBMs
+        '''
+        RBM = Autoencoder(layer_sizes)
+        RBM = RBM.pretrained_from_file(file_path)
+        self.model, self.encoder, self.decoder = RBM.unroll()
+        self.set_compiler()
+        self.encoder.compile(loss={'encoded': self.kl_loss}, optimizer=Adam(self.lr))
+
     def load_encoder(self, file_path):
         self.encoder = load_model(file_path)
 
