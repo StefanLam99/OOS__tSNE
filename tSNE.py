@@ -9,7 +9,7 @@ class tsne:
     """
     Class for t-SNE makes an object with the corresponding parameters.
     """
-    def __init__(self, d_components=2, initial_dims=30, initialization='PCA', perplexity=30, dof=1., early_exaggeration=4,
+    def __init__(self, d_components=2, initial_dims=30, initialization='PCA', perplexity=40, dof=1., early_exaggeration=4,
                  random_state=None, data_name = '', grad_method = 'gains', max_iter =1000, initial_momentum=0.5, final_momentum=0.8, learning_rate = 500):
         self.d_components = d_components # dimension of projection space
         self.initial_dims = initial_dims # initial dimensions of data, before applying t-sne

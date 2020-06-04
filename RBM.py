@@ -8,7 +8,7 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-
+from time import time
 learning_rate = 0.1
 
 
@@ -101,7 +101,7 @@ class RBM:
         DW = np.zeros((self.v_dim, self.h_dim))
         Da = np.zeros((self.v_dim, 1))
         Db = np.zeros((self.h_dim, 1))
-
+        t0 = time()
         # initialize weights and parameters
         if initialize_weights == True:
             self.W = np.random.normal(0., 0.1, size=(self.v_dim, self.h_dim))
@@ -111,7 +111,7 @@ class RBM:
             self.b = np.zeros((self.h_dim, 1))
 
         for i in range(epochs):
-            print("Epoch %i" % (i + 1))
+
             np.random.shuffle(x.T)
 
             if i > 5:
@@ -148,7 +148,7 @@ class RBM:
                 error = np.mean((v_pos_states - v_neg_probs) ** 2)
                 error_sum = error_sum + error
 
-            print("Reconstruction MSE = %.2f" % error_sum)
+            print("Epoch: %d Reconstruction MSE: %.4f elapsed time: %.2f" % (i + 1,error_sum, time()-t0))
             error_sum = 0.
 
             if plot == True:

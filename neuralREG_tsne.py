@@ -105,8 +105,7 @@ class neuralREG_tSNE:
 
             losses.append(loss/nBatches)
             #losses[epoch] = loss/nBatches
-            print('Epoch: %.d elapsed time: %.2f losses: %s ' % (
-            epoch + 1,time() - begin), losses[epoch])
+            print('Epoch: %.d elapsed time: %.2f losses: %s ' % (epoch + 1,time() - begin, losses[epoch]))
 
         return losses
 
@@ -152,6 +151,7 @@ class neuralREG_tSNE:
 
             decoded = self.model._layers[n_encoder_layers+i](decoded)
         self.decoder = Model(decoder_input, decoded)
+
     def load_RBM(self, file_path, layer_sizes):
         '''
         load the autoencoder via the RBMs
@@ -208,6 +208,7 @@ class neuralREG_tSNE:
         if dir==None:
             print("File_path not specified!")
             return
+        make_dir(file_path)
         self.model.save(file_path)
         #self.model.save(dir+'/autoencoder'+self.data_name)
         #self.encoder.save(dir+'/encoder'+self.data_name)

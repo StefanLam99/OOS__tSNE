@@ -113,7 +113,7 @@ class Dataset:
         return X, y ,X_train, y_train, X_test, y_test
 
 
-    def get_coil20_data(self, n_train = 700, n_test = 300):
+    def get_coil20_data(self):
         '''
         preproces and load coil20 data consisting of images of 20 different objects
         taken at 72 different angels. The images are 32x32 = 1024 pixels. The dataset
@@ -127,12 +127,17 @@ class Dataset:
         X = data[:,0:-1].astype(np.float32, copy=False)
         y = data[:,-1].astype(np.uint32, copy = False)
 
-        y_train = data[0:n_train, -1].astype(np.uint32, copy = False)
-        X_train = data[0:n_train, 0:-1].astype(np.float32, copy=False)
+        data_train = np.genfromtxt('data/coil20/coil20_train.csv', delimiter=',').astype(np.float32, copy = False)
+        np.random.shuffle(data_train)
+        y_train = data_train[:,-1]
+        X_train = data_train[:, 0:-1]
 
-        y_test = data[n_train:n_train+n_test, -1].astype(np.uint32, copy = False)
-        X_test = data[n_train:n_train+n_test, 0:-1].astype(np.float32, copy=False)
-
+        data_test = np.genfromtxt('data/coil20/coil20_test.csv', delimiter=',').astype(np.float32, copy = False)
+        np.random.shuffle(data_test)
+        y_test = data_test[:,-1]
+        X_test = data_test[:, 0:-1]
+        print(y_test.shape)
+        print(X_test.shape)
         return X, y, X_train, y_train, X_test, y_test
 
 

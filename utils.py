@@ -4,6 +4,7 @@ import cProfile
 from time import time
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from sklearn.metrics.pairwise import euclidean_distances
 from matplotlib.ticker import NullFormatter
 # Disable
 def blockPrint():
@@ -47,14 +48,31 @@ def shannon_entropy(Di, sigma=1.0):
     # print('H: ' + str(H))
     return Hi, Pi
 
+
 def distance_matrix_squared(X):
     '''
-    Computes distances of a matrix column wise, according to squared euclidian distance
+    Computes squared distances of a matrix column wise, according to squared euclidian distance
     '''
 
     sum_X_squared = np.sum(np.square(X), 1)
     D = np.add(np.add(-2 * np.dot(X, X.T), sum_X_squared).T, sum_X_squared)  # distance matrix squared
     return D
+
+
+def distance_matrix_squared2(X1, X2):
+    '''
+    Computes squared distances of two different matrices, accordiing to eculidian distsance
+    X1:  nxD
+    X2:  mxD
+    returns: mxn
+    '''
+    (n,_) = X1.shape
+    (m,_) = X2.shape
+    sum_X1_squared = np.sum(np.square(X1), 1)
+    sum_X2_squared = np.sum(np.square(X2), 1)
+    D = np.add(np.add(-2 * np.dot(X1, X2.T), sum_X1_squared.reshape(n,-1)).T, sum_X2_squared.reshape(m,-1))  # distance matrix squared
+    return D
+
 
 def distance_matrix(X):
     '''
@@ -64,8 +82,9 @@ def distance_matrix(X):
     sum_X_squared = np.sum(np.square(X), 1)
     D = np.add(np.add(-2 * np.dot(X, X.T), sum_X_squared).T, sum_X_squared)  # distance matrix squared
     D = np.maximum(D,1e-12)
-    return np.nan_to_num(np.sqrt(D))
-def cond_probs(X=np.array([]), tol=1e-5, perplexity=30):
+    return np.sqrt(D)
+
+def cond_probs(X=np.array([]), tol=1e-5, perplexity=40):
     """
     Find the conditional probabilities Pj|i such that each gaussian
     has the same perplexity of an NxD matrix
@@ -89,7 +108,7 @@ def cond_probs(X=np.array([]), tol=1e-5, perplexity=30):
     for i in range(n):
 
         # Print progress
-        if i % 500 == 0:
+        if i % 100 == 0:
             print("Computing P-values for point %d of %d..." % (i, n))
 
         # Compute the Gaussian kernel and entropy for the current precision
@@ -119,18 +138,18 @@ def cond_probs(X=np.array([]), tol=1e-5, perplexity=30):
             # print('sigma min' + str(sigma_min))
             # print(sigma[i])
             # Recompute the values
-            (H, thisP) = shannon_entropy(Di, sigma[i])
+            (H, Pi) = shannon_entropy(Di, sigma[i])
             Hdiff = H - logU
             # print(Hdiff)
             tries += 1
 
         # Set the final row of P
-        P[i, np.concatenate((np.r_[0:i], np.r_[i + 1:n]))] = thisP
-    print("binary search took %8.2f seconds" % (time() - t0))
-    print("Finding all conditional probabilities took %8.2f seconds" % (time() - begin))
+        P[i, np.concatenate((np.r_[0:i], np.r_[i + 1:n]))] = Pi
+    print("binary search took %.2f seconds" % (time() - t0))
+    print("Finding all conditional probabilities took %.2f seconds" % (time() - begin))
     # Return final P-matrix
     print("Mean value of sigma: %f" % np.mean(np.sqrt(sigma)))
-    return P, sigma #note: sigma is squared version
+    return P, np.sqrt(sigma) #note: sigma is squared version
 
 def joint_average_P(cond_P):
     """
@@ -161,10 +180,12 @@ def joint_Q(Y, dof=1.):
     sum_Y_squared = np.sum(np.square(Y), 1)
     num = -2. * np.dot(Y, Y.T)
     num = ((dof+1.)/2) / (1. + (np.add(np.add(num, sum_Y_squared).T, sum_Y_squared))/dof)  # numerator of qij: (1 + ||yi -yj||^2)^-1
+    numerator = num
     num[range(n), range(n)] = 0.
+
     Q = num / np.sum(num)
     Q = np.maximum(Q, 1e-12)
-    return Q, num
+    return Q, numerator
 
 def pca(X=np.array([]), no_dims=50):
     """
@@ -180,14 +201,31 @@ def pca(X=np.array([]), no_dims=50):
     print("Reducing dimension of data with PCA took: %8.2f seconds" % (time() - t0))
     return Y, M
 
-def gauss_kernel(x, X, sigma):
+
+def gauss_kernel(X1, X2, sigma):
+    '''
+    Calculates the gaussian kernel function for each
+    row of X respect to x. sigma is calculated via
+    the binary search and perplexity.
+    (m, d) = X2.shape
+    (n, D) = X1.shape
+    returns: mxn
+    '''
+    D = distance_matrix_squared2(X1,X2)
+    print(D.shape)
+    K = np.zeros(D.shape)
+    for l in range(D.shape[1]):
+        K[:,l] = -D[:,l]/(2*(sigma[l]**2))
+    return np.exp(K)
+
+
+def gauss_kernel2(x, X, sigma):
     '''
     Calculates the gaussian kernel function for each
     row of X respect to x. sigma is calculated via
     the binary search and perplexity.
     (m, d) = x.shape
     (n, D) = X.shape
-
     '''
     (n, D) = X.shape
 
@@ -196,7 +234,17 @@ def gauss_kernel(x, X, sigma):
     for i in range(n):
         k[i] = np.exp(-(np.linalg.norm(x - X[i,:])**2)/(2.*sigma[i]))
     return k
-
+def determine_sigma(D):
+    '''
+    Calculates the sigma as the mean distance to its fifth neighbor for kernel
+    t-SNE.
+    :param D: distance matrix
+    '''
+    sorted = np.sort(D,1)
+    five_neighbors = sorted[:,0:5]
+    sigma = np.mean(five_neighbors,axis=1)
+    sigma_first = sorted[:,1]*0.25 # first column are zeros for n*n
+    return sigma, sigma_first
 
 def rank_matrix2(x):
     """Returns rank matrix from pairwise distance matrix a"""
@@ -212,6 +260,7 @@ def rank_matrix2(x):
             r[i, j] = pos[0][0] # there should be a better syntax for this
 
     return r.astype('int')
+
 def rank_matrix(X):
     '''
     Computes the rank matrix for the pairwise distances of X, rows are in ascending order, according to paiwrise distances
@@ -228,6 +277,7 @@ def rank_matrix(X):
         ranks[i,sorted[i,:]] = indices
 
     return ranks.astype(np.int), D
+
 @profile
 def trustworthniness(X, y, k_neighbors):
     '''
@@ -307,7 +357,7 @@ def continuity(X, y, k_neighbors):
 
             V.append(neighbors)
 
-        # computing trustworthiness for the given k_neighbors
+        # computing continuities for the given k_neighbors
         sum = 0
         for i in range(n):
             for j in V[i]:
@@ -336,8 +386,8 @@ def plot(Y, labels, title='',marker = None ,label = False, cmap= None, s=15, sav
     ax.set_title(title)
     #ax.xaxis.set_major_formatter(NullFormatter())
     #ax.yaxis.set_major_formatter(NullFormatter())
-    fig.patch.set_visible(False)
-    ax.axis('off')
+    #fig.patch.set_visible(False)
+    #ax.axis('off')
     if label:
         plt.legend(*scatter.legend_elements(), loc="upper right", title='Labels', prop={'size': 6}, fancybox=True)
     fig.tight_layout()

@@ -98,7 +98,7 @@ class neural_tSNE:
         '''
         RBM = Autoencoder(layer_sizes)
         RBM = RBM.pretrained_from_file(file_path)
-        self.model = RBM.unroll()
+        _, self.model, _ = RBM.unroll()
 
         self.model.compile(loss= self.kl_loss, optimizer=Adam(self.lr))
 

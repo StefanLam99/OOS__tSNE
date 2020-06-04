@@ -1,11 +1,11 @@
 import numpy as np
 from time import time
-from utils import gauss_kernel, cond_probs, pca, joint_Q, joint_average_P, profile, plot
+from utils import gauss_kernel,determine_sigma, cond_probs, pca, joint_Q, joint_average_P, profile, plot, distance_matrix, distance_matrix_squared
 from datasets import Dataset
 
 
 class kernel_tSNE:
-    def __init__(self, d_components=2, initial_dims=30, initialization='PCA', perplexity=30, dof=1., early_exaggeration=4,
+    def __init__(self, d_components=2, initial_dims=30, initialization='PCA', perplexity=40, dof=1., early_exaggeration=4,
                  random_state=None, data_name = '', max_iter =1000, alpha=None, lr = 0.5,beta_1 = 0.9,
                  beta_2 = 0.999  ,X_train = None):
 
@@ -25,8 +25,16 @@ class kernel_tSNE:
         self.beta_2 = beta_2
         if(self.initialization is "PCA"):
             print("First reducing dimensions of X_train with PCA to %.2f dimensions" %(self.initial_dims))
-            self.X_train = pca(self.X_train, self.initial_dims).real
+            self.X_train, _ = pca(self.X_train, self.initial_dims)
         cond_p, self.sigma = cond_probs(self.X_train)
+        D = distance_matrix(self.X_train)
+        sigma, self.sigma = determine_sigma(D)
+        print(self.sigma)
+        print(sigma)
+
+        print(D.shape)
+        print(self.sigma.shape)
+        print(self.X_train.shape)
         self.P = joint_average_P(cond_p)
 
     @profile
@@ -43,11 +51,13 @@ class kernel_tSNE:
         cost = np.zeros(self.max_iter)
         self.alpha = np.random.randn(n, self.d_components)
         # calculating kernels
-        K = np.zeros((n,n)) # kernel values for all rows of x_train
 
+
+        K = gauss_kernel(self.X_train, self.X_train, self.sigma) # n x n
+        ''' 
         for i in range(n):
             K[i,:] = gauss_kernel(X_train[i,:], X_train, self.sigma) # n x n
-
+        '''
         Y = np.dot(K, self.alpha) # random initial solution
         print(Y)
         # training with ADAM
@@ -80,8 +90,8 @@ class kernel_tSNE:
                 #print(Y[:,d].shape)
                 differences.append(Y[:,d].reshape(-1,1) - Y[:,d].reshape(1,-1))
                 difference = Y[:,d].reshape(-1,1) - Y[:,d].reshape(1,-1)
-                dalpha[:,d] = np.sum(np.sum(first_term*difference,axis=1).reshape(-1,1)*K,axis=0)
-
+                #dalpha[:,d] = np.sum(np.sum(first_term*difference,axis=1).reshape(-1,1)*K,axis=0)
+                dalpha[:, d] = np.sum(np.sum(first_term * difference, axis=1).reshape(-1, 1) * K, axis=0)
             ''' 
             for l in range(n):
                 kernel_factor = K[:,l].reshape(-1,1)
@@ -103,7 +113,7 @@ class kernel_tSNE:
             self.alpha = self.alpha - (self.lr * m_corr) / (np.sqrt(v_corr) + epsilon)
             Y = np.dot(K, self.alpha)
 
-            print('step 5: ' + str(time() - t0))
+
            # print(Y)
             # Compute cost function
 
@@ -126,27 +136,30 @@ class kernel_tSNE:
             return
         if(self.initialization is "PCA"):
             print("First reducing dimensions of X with PCA to %.2f dimensions" % (self.initial_dims))
-            X = pca(X, self.initial_dims).real
+            X, _ = pca(X, self.initial_dims)
 
         (m, _) = X.shape
         (n, _) = self.X_train.shape
-        K = np.zeros((m,n))
-        for i in range(m):
-            K[i,:] = gauss_kernel(X[i,:], self.X_train, self.sigma)
+        K = gauss_kernel(self.X_train, X, self.sigma)
 
         return np.dot(K, self.alpha)
+
+    def load(self, file_alpha):
+        self.alpha = np.genfromtxt(file_alpha, delimiter=',')
 
 
 
 if __name__ == '__main__':
+    '''
     begin = time()
     seed = 0
     dataset = Dataset(seed)
     #X, y, X_train, y_train, X_test, y_test = dataset.get_IRIS_data(n_train=100)
     #X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
-    X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=10000, n_test=4000)
+    X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=6000, n_test=4000)
     #alpha = np.genfromtxt('kernelCoil20alpha.csv', delimiter=',')
-    model = kernel_tSNE(random_state=seed, max_iter=300, X_train=X_train)
+    model = kernel_tSNE(random_state=seed, max_iter=100, X_train=X_train, initialization=None)
+    #model.load('kernelMNIST10000alpha.csv')
     Y, alpha, cost = model.train()
     np.savetxt('kernelMNIST10000Y.csv', Y, delimiter=',')
     np.savetxt('kernelMNIST10000alpha.csv', alpha, delimiter=',')
@@ -156,19 +169,52 @@ if __name__ == '__main__':
     #np.savetxt('test.csv' , y_test, delimiter=',')
     #np.savetxt('kerneltrainY.csv', Y, delimiter=',')
     end = time()
-    plot(Y, y_train, title='Kernel t-SNE: mnist10000 train, ' )
+    plot(Y, y_train, cmap='Paired',title='Kernel t-SNE: mnist10000 train, ' )
     Y = model.predict(X_test)
-    plot(Y, y_test, title='Kernel t-SNE: mnist10000 test, ' )
+    plot(Y, y_test, cmap='Paired', title='Kernel t-SNE: mnist10000 test, ' )
+    '''
+    t0 = time()
+    seed = 0
+    dataset = Dataset(seed)
+    X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=6000, n_test=4000)
+    Y = np.genfromtxt('results/MNIST/ADAMY2.csv', delimiter=',')
+    #X, _ = pca(np.concatenate((X_train,X_test), axis=0), 30)
+    X_train = X[0:6000,:]
+    X_test = X[6000:,:]
+    #cond_P, sigma = cond_probs(X_train)
+    #np.savetxt('P.csv', cond_P, delimiter=',')
+    #cond_P
+    #print(sigma)
+    D = distance_matrix(X)
+    print(D.shape)
+    sigma, sigma_first = determine_sigma(D)
+    print(sigma.shape)
 
-    '''' 
-    X_train = pca(X_train, no_dims=30).real
-    X_test = pca(X_test, no_dims=30).real
-    _,sigma = cond_probs(X_train)
-    K_train=np.zeros((1000,1000))
-    np.savetxt('keneltestY.csv',Y, delimiter=',')
-'''
+    print('starting kernel calculatipon')
+    K_train = gauss_kernel(X, X, sigma_first)
+    K_train = K_train/np.sum(K_train,1).reshape(6000,-1)
+    print('elapsed time: %.2f'%(time() - t0))
+    print('starting pseudo inverse')
+    K_inverse = np.linalg.pinv(K_train)
+    #K_inverse = np.linalg.pinv(X_train)
 
+    print(X_train.shape)
+    print(K_inverse)
+    #print(A)
+    print(K_inverse.shape)
+    print('elapsed time: %.2f' % (time() - t0))
+    A = np.dot(K_inverse, Y)
 
+    Y_train = np.dot(K_train, A)
+    #Y_train = np.dot(X_train, A)
+    plot(Y_train, y_train, cmap='Paired', title='Kernel t-SNE SIMPLE witb pca sigma first 0.5: mnist10000 train, ')
+    A = np.dot(np.dot(np.linalg.inv(np.dot(K_train.T, K_train)), (K_train.T)), Y)
+
+    K_test = gauss_kernel(X_train, X_test, sigma_first)
+    K_test = K_test/ np.sum(K_test, 1).reshape(4000, -1)
+    Y_test = np.dot(K_test, A)
+    #Y_test = np.dot(X_test, A)
+    plot(Y_test, y_test, cmap='Paired', title='Kernel t-SNE SIMPLE with pca sigma first 0.5: mnist10000 test, ')
 
 
 
