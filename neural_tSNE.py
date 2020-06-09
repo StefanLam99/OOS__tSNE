@@ -14,6 +14,7 @@ from keras.losses import mse
 import keras.losses
 from utils import *
 from autoencoder import Autoencoder
+
 class neural_tSNE:
     def __init__(self, d_components=2, perplexity=40., epochs=100, lr=0.01, random_state=0, batch_size=100, model=None, labda=0.99):
 

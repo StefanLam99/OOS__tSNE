@@ -66,8 +66,18 @@ class neuralREG_tSNE:
         self.decoder = Model(encoded_input, decoder_layer(encoded_input))
         self.model = autoencoder
 
-        self.set_compiler()
 
+        decoder_input = Input(shape=(self.d_components,))
+        decoded = decoder_input
+        n_encoder_layers = int(len(self.model._layers) / 2) + 1
+        for i in range(n_encoder_layers-1):
+
+            decoded = self.model._layers[n_encoder_layers+i](decoded)
+        self.decoder = Model(decoder_input, decoded)
+        self.set_compiler()
+        autoencoder.summary()
+        self.encoder.summary()
+        self.decoder.summary()
 
     def train(self, X_train):
         """
@@ -117,7 +127,7 @@ class neuralREG_tSNE:
             print("Train the model first!")
             return
         Y = self.model.predict(X)
-        return {'encoded': Y[0], 'decoded': Y[1]}
+        return Y[0]
 
     def predict_encoder(self, X):
         if self.encoder == None:
@@ -200,10 +210,10 @@ class neuralREG_tSNE:
         if self.labda == 1:
             self.model.compile(loss={'encoded': self.kl_loss}, optimizer=Adam(self.lr))
         elif self.labda == 0:
-            self.model.compile(loss = {'decoded': self.mse_loss}, optimizer=Adam(self.lr))
+            self.model.compile(loss = {'decoded': 'mse'}, optimizer=Adam(self.lr))
         else:
             self.model.compile(loss={'encoded': self.kl_loss, 'decoded': self.mse_loss}, optimizer=Adam(self.lr),
-                                loss_weights=[self.labda, 1 - self.labda])
+                                loss_weights=[self.labda, 1-self.labda])
     def save(self, file_path=None):
         if dir==None:
             print("File_path not specified!")

@@ -21,7 +21,7 @@ class Dataset:
         np.random.seed(self.seed)
         print('loading and preprocessing MNIST data...')
         data_train = np.genfromtxt('data/MNIST/mnist_train.csv', delimiter=',')
-        X = data_train[:, 1:].astype(np.float32, copy=False)
+        X = data_train[:, 1:].astype(np.float32, copy=False)/255
         y = data_train[:,0]
 
         y_train = data_train[0:n_train, 0]
@@ -136,8 +136,6 @@ class Dataset:
         np.random.shuffle(data_test)
         y_test = data_test[:,-1]
         X_test = data_test[:, 0:-1]
-        print(y_test.shape)
-        print(X_test.shape)
         return X, y, X_train, y_train, X_test, y_test
 
 

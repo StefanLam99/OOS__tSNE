@@ -34,11 +34,11 @@ class Autoencoder:
         self.v_dim = layer_dims[0]
         self.num_hidden_layers = len(layer_dims) - 1
         self.layer_dims = layer_dims
-
+        ''' 
         print("Layer dimensions:")
         for i in range(self.num_hidden_layers + 1):
             print("Layer %i: %i" % (i, self.layer_dims[i]))
-
+        '''
         self.W = []
         self.b = []
         self.a = []

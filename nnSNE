@@ -9,57 +9,61 @@ from utils import plot
 from datasets import Dataset
 from  neural_tSNE import *
 from neuralREG_tsne import *
-layer_dim = [1024,500,500,2000, 2]
+layer_dim = [784,500,500,2000, 2]
 seed = 0
 dataset = Dataset(seed)
-#X, y , X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=500)
-X, y , X_train, y_train, X_test, y_test = dataset.get_coil20_data()
+X, y , X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=60000, n_test=10000)
+#X, y , X_train, y_train, X_test, y_test = dataset.get_coil20_data()
 RBM = Autoencoder(layer_dim)
-RBM.pretrain(X_train.T, epochs=15)
-RBM.save('Models/weightsRBM/coil20')
-#RBM = RBM.pretrained_from_file('Models/coil20/test')
-autoencoder, encoder, decoder = RBM.unroll()
+#RBM.pretrain(X_train.T, epochs=15)
+#RBM.save('Models/weightsRBM/coil20')
+#RBM = RBM.pretrained_from_file('Models/weightsRBM/MNIST60000')
+#autoencoder, encoder, decoder = RBM.unroll()
 #autoencoder.save('autoencoderRBMcoil20')
-encoder.summary()
-autoencoder.summary()
-decoder.summary()
+#encoder.summary()
+#autoencoder.summary()
+#decoder.summary()
 
-
-neural_model = neural_tSNE(epochs=50, batch_size=480, lr=0.01)
+'''
+neural_model = neural_tSNE(epochs=50, batch_size=1000, lr=0.01)
 
 #neural_model.build_nn(1024)
-neural_model.load_RBM('Models/weightsRBM/coil20')
+neural_model.load_RBM('Models/weightsRBM/MNIST60000', layer_dim)
 losses = neural_model.train(X_train)
-np.savetxt('Models/coil20/coil20rbmlosses.csv', losses, delimiter=',')
-#neural_model.save('Models/coil20/parEncoderRBM')
+np.savetxt('Models/parametric/MNISTrbm100epochlosses.csv', losses, delimiter=',')
+neural_model.save('Models/parametric/MNISTpar2epoch100RBM')
 #neural_model.load_model('Models/coil20/parEncoderRBM')
 #neural_model.load_model(model)
 Y = neural_model.predict(X_train)
-plot(Y, y_train, s=1, linewidth=0.1, cmap='gist_rainbow', title='coil20 960 with rbm')
+plot(Y, y_train, s=1, linewidth=0.1, cmap='gist_rainbow', title='train coil20 960 with rbm')
+
+Y = neural_model.predict(X_test)
+plot(Y, y_test, s=1, linewidth=0.1, cmap='gist_rainbow', title='test coil20 960 with rbm')
 
 
 
+'''
+dir = 'Models/autoencoder/'
+file_path = 'MNISTauto2noRBMtest'
+neuralREG_model = neuralREG_tSNE(epochs=50, batch_size=1000, lr=0.05, labda=0.0)
 
-''' 
-neuralREG_model = neuralREG_tSNE(epochs=50, batch_size=480, lr=0.01, labda=0, toTrain=False)
+neuralREG_model.build(784)
 
-#neuralREG_model.build_nn(1024)
-
-neuralREG_model.load_model('autoencoderRBMcoil20')
-losses = neuralREG_model.train(X)
+#neuralREG_model.load_model('Models/autoencoder/MNISTauto2RBM')
+#neuralREG_model.load_RBM('Models/weightsRBM/MNIST60000', layer_dim)
+losses = neuralREG_model.train(X_train)
 
 #neuralREG_model.load_model('Models/coil20/regautoEncoderRBM')
-#neuralREG_model.save('Models/coil20/regautoEncoderRBM')
-np.savetxt('coil20rbmREG0losses.csv', losses, delimiter=',')
-Y = neuralREG_model.predict(X)
+neuralREG_model.save(dir + file_path )
+np.savetxt(dir + file_path + 'losses.csv', losses, delimiter=',')
+Y = neuralREG_model.predict(X_train)
 print(Y)
 print(y)
 print(type(Y))
 neuralREG_model.model.summary()
 neuralREG_model.encoder.summary()
 neuralREG_model.decoder.summary()
-plot(Y['encoded'], y, s=1, linewidth=0.1, cmap='gist_rainbow', title='coil20 1440 with rbm labda = 0')
+plot(Y, y_train, s=1, linewidth=0.1, cmap='Paired', title='training mnist diff loss labda = 0.0')
 
-YY = neuralREG_model.predict_encoder(X)
-plot(YY, y, s=1, linewidth=0.1, cmap='gist_rainbow', title='test encoder')
-'''
+YY = neuralREG_model.predict(X_test)
+plot(YY, y_test, s=1, linewidth=0.1, cmap='Paired', title='test mnist diff loss labda = 0.0')

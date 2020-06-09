@@ -6,6 +6,21 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from sklearn.metrics.pairwise import euclidean_distances
 from matplotlib.ticker import NullFormatter
+import timeit
+
+from functools import wraps
+
+def timer(func):
+    @wraps(func)
+    def _time_it(*args, **kwargs):
+        start = int(round(time() * 1000))
+        try:
+            return func(*args, **kwargs)
+        finally:
+            end_ = int(round(time() * 1000)) - start
+            print(f"The method '{func.__name__}' took: {end_/1000 if end_/1000 > 0 else 0} seconds")
+    return _time_it
+
 # Disable
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
@@ -115,7 +130,7 @@ def cond_probs(X=np.array([]), tol=1e-5, perplexity=40):
         sigma_min = -np.inf
         sigma_max = np.inf
         Di = D[i, np.concatenate((np.r_[0:i], np.r_[i + 1:n]))]
-        (H, thisP) = shannon_entropy(Di, sigma[i])
+        (H, Pi) = shannon_entropy(Di, sigma[i])
 
         # Evaluate whether the perplexity is within tolerance
         Hdiff = H - logU
@@ -202,7 +217,7 @@ def pca(X=np.array([]), no_dims=50):
     return Y, M
 
 
-def gauss_kernel(X1, X2, sigma):
+def norm_gauss_kernel(X1, X2, sigma):
     '''
     Calculates the gaussian kernel function for each
     row of X respect to x. sigma is calculated via
@@ -212,11 +227,13 @@ def gauss_kernel(X1, X2, sigma):
     returns: mxn
     '''
     D = distance_matrix_squared2(X1,X2)
+    (m, n) = D.shape
     print(D.shape)
     K = np.zeros(D.shape)
     for l in range(D.shape[1]):
         K[:,l] = -D[:,l]/(2*(sigma[l]**2))
-    return np.exp(K)
+    kernel = np.exp(K)
+    return kernel/np.sum(kernel,1).reshape(m,-1) # reshape it in the size of the X2 the "test" set
 
 
 def gauss_kernel2(x, X, sigma):
@@ -234,7 +251,9 @@ def gauss_kernel2(x, X, sigma):
     for i in range(n):
         k[i] = np.exp(-(np.linalg.norm(x - X[i,:])**2)/(2.*sigma[i]))
     return k
-def determine_sigma(D):
+
+
+def determine_sigma(D, c):
     '''
     Calculates the sigma as the mean distance to its fifth neighbor for kernel
     t-SNE.
@@ -243,8 +262,8 @@ def determine_sigma(D):
     sorted = np.sort(D,1)
     five_neighbors = sorted[:,0:5]
     sigma = np.mean(five_neighbors,axis=1)
-    sigma_first = sorted[:,1]*0.25 # first column are zeros for n*n
-    return sigma, sigma_first
+    sigma_first = sorted[:,1]*c # first column are zeros for n*n
+    return sigma_first
 
 def rank_matrix2(x):
     """Returns rank matrix from pairwise distance matrix a"""
@@ -278,7 +297,7 @@ def rank_matrix(X):
 
     return ranks.astype(np.int), D
 
-@profile
+@timer
 def trustworthniness(X, y, k_neighbors):
     '''
     Calculates the trustworthiness of a DR technique, it can be
@@ -326,6 +345,7 @@ def trustworthniness(X, y, k_neighbors):
 
     return trusts
 
+@timer
 def continuity(X, y, k_neighbors):
     '''
     Calculates the continuity of a DR technique, it can be

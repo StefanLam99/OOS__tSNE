@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 seed = 0
 data_name = 'COIL20'
-file_path = 'results/'+data_name + '/' + data_name + 'costplot'
+file_path = 'results/'+data_name + '/' + data_name + 'costplotALL'
 dataset = Dataset(seed)
 #X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
 Csgd = np.genfromtxt('results/'+data_name+'/SGDcost2.csv', delimiter=',')
 Cadam = np.genfromtxt('results/'+data_name+'/ADAMcost2.csv', delimiter=',')
-Cgains = np.genfromtxt('results/'+data_name+'/gainscost2.csv', delimiter=',')
+Cgains = np.genfromtxt('results/tSNE/'+data_name+'maatencost.csv', delimiter=',')
 start = 101
 end = 1000
 x = range(start,end)
