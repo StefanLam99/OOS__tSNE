@@ -11,7 +11,7 @@ import pandas as pd
 import os.path
 from RBM import *
 from RBM_with_linear_hidden_units import *
-
+from RBM_with_linear_visible_units import *
 from keras.layers import Input, Dense
 from keras.models import Model
 from keras import backend as K
@@ -82,7 +82,9 @@ class Autoencoder:
         RBM_layers = []
 
         for i in range(self.num_hidden_layers):  # initialize RBM's
-            if (i < self.num_hidden_layers -1):
+            if i == 0:
+                RBM_layers.append(RBM_with_linear_visible_units(self.layer_dims[i], self.layer_dims[i + 1]))
+            elif  (i < self.num_hidden_layers -1):
                 RBM_layers.append(RBM(self.layer_dims[i], self.layer_dims[i + 1]))
             else:
                 RBM_layers.append(RBM_with_linear_hidden_units(self.layer_dims[i], self.layer_dims[i + 1]))

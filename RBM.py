@@ -126,7 +126,7 @@ class RBM:
                 # get hidden probs, positive product, and sample hidden states
                 h_pos_probs = self.h_probs(v_pos_states)
                 pos_prods = v_pos_states[:, np.newaxis, :] * h_pos_probs[np.newaxis, :, :]
-                h_pos_states = np.random.binomial(1, h_pos_probs)
+                h_pos_states = np.random.binomial(1, h_pos_probs) # gibbs sampling step
 
                 # get negative probs and product
                 v_neg_probs = self.v_probs(h_pos_states)
@@ -151,20 +151,6 @@ class RBM:
             print("Epoch: %d Reconstruction MSE: %.4f elapsed time: %.2f" % (i + 1,error_sum, time()-t0))
             error_sum = 0.
 
-            if plot == True:
-                self.plot_weight_histogram()
-                self.plot_weights()
-
-                v, _ = self.gibbs_sampling(1, 1)
-                plt.imshow(v.reshape((28, 28)), cmap=plt.cm.gray)
-                plt.axis('off')
-                plt.show()
-
-                v, _ = self.gibbs_sampling(1, 1, x[:, 0].reshape((self.v_dim, 1)))
-                plt.imshow(v.reshape((28, 28)), cmap=plt.cm.gray)
-                plt.axis('off')
-                plt.show()
-
         return
 
     def gibbs_sampling(self, n=1, m=1, v=None):
@@ -185,35 +171,6 @@ class RBM:
             h_states = np.random.binomial(1, h_probs)
         return v_states, h_states
 
-    def plot_weights(self):
-        '''
-            For debugging
-        '''
-
-        return
-
-    def plot_weight_histogram(self):
-        '''
-            For debugging
-        '''
-        plt.figure(1)
-
-        plt.subplot(311)
-        plt.title('Weights')
-        plt.hist(self.W.flatten(), bins='auto')
-
-        plt.subplot(312)
-        plt.title('Visible biases')
-        plt.hist(self.a.flatten(), bins='auto')
-
-        plt.subplot(313)
-        plt.title('Hidden biases')
-        plt.hist(self.b.flatten(), bins='auto')
-
-        plt.tight_layout()
-
-        plt.show()
-        return
 
     def save(self, filename):
         '''

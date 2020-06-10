@@ -2,14 +2,19 @@
 # Preprocesses and loads several datasets
 
 import numpy as np
+from math import pi, cos
 from sklearn.preprocessing import normalize, minmax_scale
 from keras.datasets import cifar10
+import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
+from utils import plot
+from tSNE import *
 class Dataset:
 
     def __init__(self, seed):
         self.seed = seed
 
-
+# natural datasets
 
     def get_MNIST_data(self, n_train = 3000, n_test = 1000):
         '''
@@ -137,6 +142,53 @@ class Dataset:
         y_test = data_test[:,-1]
         X_test = data_test[:, 0:-1]
         return X, y, X_train, y_train, X_test, y_test
+
+
+# artificial datasets
+
+    def get_SWISS_data(self):
+        n = 5000
+        np.random.seed(self.seed)
+        p = np.random.uniform(size=(n, 1))
+        q = np.random.uniform(size=(n, 1))
+
+        t = ((3*pi)/2)*(1+2*p)
+        print(t)
+        X = np.zeros(shape=(n, 3))
+        print((t*np.cos(t)).shape)
+        X[:,0] = (t*np.sin(t)).reshape(n)
+        X[:,1] = (30*q).reshape(n)
+        X[:,2] = (t*np.cos(t)).reshape(n)
+
+        X += 0.05*np.random.randn(n, 3)
+
+        labels = np.remainder(np.sum(np.concatenate((np.round(t/2), np.round((30*q)/12)), axis=1),axis=1), 2)
+
+        return X, labels
+
+
+
+if __name__ == '__main__':
+    dataset = Dataset(0)
+    fig = plt.figure()
+    ax = plt.axes(projection="3d")
+
+    X, labels = dataset.get_SWISS_data()
+    print(X)
+    X = minmax_scale(X)
+    print(X)
+    print(labels.shape)
+    print(X[:,2].shape)
+    print(labels)
+    print(X[:,2])
+    ax.scatter3D(X[:,0], X[:,1], X[:,2], c = labels, cmap='Paired', s=2, linewidths=0.1)
+    plt.show()
+    model = tsne(random_state=0, initialization=None, grad_method='ADAM', perplexity=40,
+                 max_iter=1000, learning_rate=0.01)
+
+    Y, cost = model.transform(X)
+
+    plot(Y, labels, cmap='Paired', s=1, linewidth=0.1)
 
 
 

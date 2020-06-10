@@ -1,15 +1,5 @@
-# RBM class
-'''
-    Adapted from code by Ruslan Salakhutdinov and Geoff Hinton
-    Available at: http://science.sciencemag.org/content/suppl/2006/08/04/313.5786.504.DC1
-    A class defining a restricted Boltzmann machine
-    whose hidden units are "real-valued feature detectors
-    drawn from a unit variance Gaussian whose mean is determined by the input from
-    the logistic visible units" (Hinton, 2006)
-
-    The only difference from RBM_with_probs is how h_probs are generated and h_states are
-    sampled.
-'''
+# RBM class with gaussian visible units
+# added this class for real-valued input data
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -19,20 +9,20 @@ from RBM import *
 learning_rate = 0.001
 
 
-class RBM_with_linear_hidden_units(RBM):
+class RBM_with_linear_visible_units(RBM):
 
-    def h_probs(self, v):
+    def v_probs(self, h):
         '''
-            h_probs is defined differently than in the RBM
+            v_probs is defined differently than in the RBM
             with binary hidden units.
 
             Input:
-            - v has shape (v_dim,m)
-            - b has shape (h_dim,1)
+            - h has shape (h_dim,m)
+            - a has shape (v_dim,1)
             - W has shape (v_dim,h_dim)
         '''
-        assert (v.shape[0] == self.v_dim)
-        return self.b + np.dot(self.W.T, v)
+        assert (h.shape[0] == self.h_dim)
+        return self.a + np.dot(self.W, h)
 
     def train(self, x, epochs=10, batch_size=100, learning_rate=learning_rate, plot=False, initialize_weights=True):
         '''
@@ -80,13 +70,14 @@ class RBM_with_linear_hidden_units(RBM):
                 momentum = initialmomentum
 
             for j in range(num_minibatches):
-                # get the next batch
-                v_pos_states = x[:, j * batch_size:(j + 1) * batch_size]
+                # get the next batch, this part changes for linear visible units
+                v_pos_probs = x[:, j * batch_size:(j + 1) * batch_size] # real valued
+                v_pos_states = v_pos_probs + np.random.normal(0., 1., size=v_pos_probs.shape) # sigma = 1
 
                 # get hidden probs, positive product, and sample hidden states
                 h_pos_probs = self.h_probs(v_pos_states)
                 pos_prods = v_pos_states[:, np.newaxis, :] * h_pos_probs[np.newaxis, :, :]
-                h_pos_states = h_pos_probs + np.random.normal(0., 1., size=h_pos_probs.shape)  # this line changes, sigma=1
+                h_pos_states = np.random.binomial(1, h_pos_probs)  # gibbs sampling step
 
                 # get negative probs and product
                 v_neg_probs = self.v_probs(h_pos_states)
@@ -126,7 +117,7 @@ class RBM_with_linear_hidden_units(RBM):
         h_states = np.random.binomial(1, h_probs)
         for i in range(n):
             v_probs = self.v_probs(h_states)
-            v_states = np.random.binomial(1, v_probs)
+            v_states = v_probs + np.random.normal(0., 1., size=v_probs.shape)# this line changes
             h_probs = self.h_probs(v_states)
-            h_states = h_probs + np.random.normal(0., 1., size=h_probs.shape)  # this line changes
+            h_states = np.random.binomial(1, h_probs)
         return v_states, h_states
