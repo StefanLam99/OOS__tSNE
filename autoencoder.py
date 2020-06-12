@@ -15,7 +15,7 @@ from RBM_with_linear_visible_units import *
 from keras.layers import Input, Dense
 from keras.models import Model
 from keras import backend as K
-
+from utils import profile
 learning_rate = 0.01
 
 
@@ -72,6 +72,7 @@ class Autoencoder:
 
         return rbm
 
+    @profile
     def pretrain(self, x, epochs, num_samples=50000):
         '''
             Greedy layer-wise training
@@ -82,7 +83,7 @@ class Autoencoder:
         RBM_layers = []
 
         for i in range(self.num_hidden_layers):  # initialize RBM's
-            if i == 0:
+            if i == -1:
                 RBM_layers.append(RBM_with_linear_visible_units(self.layer_dims[i], self.layer_dims[i + 1]))
             elif  (i < self.num_hidden_layers -1):
                 RBM_layers.append(RBM(self.layer_dims[i], self.layer_dims[i + 1]))
@@ -92,10 +93,10 @@ class Autoencoder:
         for i in range(self.num_hidden_layers):  # train RBM's 
             print("Training RBM layer %i" % (i + 1))
 
-            RBM_layers[i].train(x, epochs)  # train the ith RBM
+            x = RBM_layers[i].train(x, epochs)  # train the ith RBM
 
-            if not (i == self.num_hidden_layers - 1):  # generate samples to train next layer
-                _, x = RBM_layers[i].gibbs_sampling(2, num_samples)
+            #if not (i == self.num_hidden_layers - 1):  # generate samples to train next layer
+             #   _, x = RBM_layers[i].gibbs_sampling(2, num_samples)
 
             self.W.append(RBM_layers[i].W)  # save trained weights
             self.b.append(RBM_layers[i].b)
@@ -145,7 +146,7 @@ class Autoencoder:
 
 
 
-        autoencoder = Model(inputs, output=[encoded, x])
+        autoencoder = Model(inputs, outputs=[encoded, x])
         encoder = Model(inputs, encoded)
         # make decoder
         decoder_input = Input(shape=(self.layer_dims[-1],))

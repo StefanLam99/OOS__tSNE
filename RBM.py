@@ -9,6 +9,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 from time import time
+from utils import profile
 learning_rate = 0.1
 
 
@@ -74,6 +75,7 @@ class RBM:
         assert (not np.sum(np.isnan(h_probs)))
         return h_probs
 
+    @profile
     def train(self, x, epochs=20, batch_size=100, learning_rate=learning_rate, plot=False, initialize_weights=True):
         '''
             Trains the RBM with the 1-step Contrastive Divergence algorithm (Hinton, 2002).
@@ -112,7 +114,7 @@ class RBM:
 
         for i in range(epochs):
 
-            np.random.shuffle(x.T)
+            #np.random.shuffle(x.T)
 
             if i > 5:
                 momentum = finalmomentum
@@ -151,7 +153,7 @@ class RBM:
             print("Epoch: %d Reconstruction MSE: %.4f elapsed time: %.2f" % (i + 1,error_sum, time()-t0))
             error_sum = 0.
 
-        return
+        return self.h_probs(x)
 
     def gibbs_sampling(self, n=1, m=1, v=None):
         '''

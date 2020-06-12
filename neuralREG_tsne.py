@@ -59,7 +59,7 @@ class neuralREG_tSNE:
         decoded = Dense(n_input,activation=activations[0], name='decoded')(decoded)
 
         # define autoencoder,encoder and decoder models
-        autoencoder = Model(input, output=[encoded,decoded])
+        autoencoder = Model(input, outputs=[encoded,decoded])
         self.encoder = Model(input, encoded)
         encoded_input = Input(shape=(layer_sizes[0],))
         decoder_layer = autoencoder._layers[-1]
@@ -121,25 +121,29 @@ class neuralREG_tSNE:
 
     def predict(self, X):
         """
-        Makes prediction for a given data set X nxD with the autoencoder
+        Makes encoded prediction for a given data set X nxD with the autoencoder
         """
         if self.model == None:
             print("Train the model first!")
             return
         Y = self.model.predict(X)
+
         return Y[0]
 
     def predict_encoder(self, X):
         if self.encoder == None:
             print("Load the encoder first!")
             return
-        return self.encoder.predict(X)
+        Y = self.model.predict(X)
+
+        return Y[0]
 
     def predict_decoder(self, X):
         if self.encoder == None:
-            print("Train the model first!")
+            print("Train the decoder first!")
             return
-        return self.decoder.predict(X)
+        Y = self.model.predict(X)
+        return Y[1]
 
     # loading functions:
     def load_model(self, file_path):
@@ -172,11 +176,6 @@ class neuralREG_tSNE:
         self.set_compiler()
         self.encoder.compile(loss={'encoded': self.kl_loss}, optimizer=Adam(self.lr))
 
-    def load_encoder(self, file_path):
-        self.encoder = load_model(file_path)
-
-    def load_decoder(self, file_path):
-        self.decoder = load_model(file_path)
 
     # losses
     def mse_loss(self, X, Y):
@@ -220,42 +219,4 @@ class neuralREG_tSNE:
             return
         make_dir(file_path)
         self.model.save(file_path)
-        #self.model.save(dir+'/autoencoder'+self.data_name)
-        #self.encoder.save(dir+'/encoder'+self.data_name)
-        #self.decoder.save(dir+'/decoder'+self.data_name)
 
-
-if __name__ == '__main__':
-    n_sample = 10000
-    (X_train, y_train), (X_test, y_test) = mnist.load_data()
-    X_train=X_train[0:n_sample,:]
-    y_train=y_train[0:n_sample]
-    X_test=X_test[0:5000,:]
-    y_test=y_test[0:5000]
-    X_train = X_train.reshape(-1, 784)
-    X_test = X_test.reshape(-1, 784)
-    X_train = X_train.astype('float32')
-    X_test = X_test.astype('float32')
-    X_train /= 255.
-    X_test /= 255.
-    print(K.image_data_format())
-    model = neuralREG_tSNE( data_name='MNIST', epochs=1000, batch_size=500, lr=0.001, labda=0.0)
-    #model.build_cnn()
-    #model.build_nn(n_input=784, activations=np.array(['sigmoid', 'sigmoid', 'relu']))
-    ''' 
-    model.build(n_input=784)
-    model.model.summary()
-    model.train(X_train)
-    model.save('Models/NN/regNN')
-    model.model.summary()
-    '''
-    model.load_encoder('Models/NN/regNN/encoderMNIST')
-    y = model.predict_encoder(X_train)
-    plot(y, y_train, title='labda=0.0')
-    print(y.shape)
-    print(y)
-
-    y = model.predict_encoder(X_test)
-    plot(y, y_test, title='labda=0.0')
-    print(np.sum(X_test,axis=1))
-    print(np.sum(model.predict(X_test),axis=1))

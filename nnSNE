@@ -5,33 +5,108 @@ from utils import blockPrint, enablePrint
 from tSNE import cond_probs, joint_average_P, joint_Q, pca
 from autoencoder import *
 from keras.models import load_model
-from utils import plot
+from utils import plot, make_dir
+from RBM import *
 from datasets import Dataset
 from  neural_tSNE import *
 from neuralREG_tsne import *
-layer_dim = [784,500,500,2000, 2]
+
+# initialization dataset/model
 seed = 0
 dataset = Dataset(seed)
-X, y , X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=60000, n_test=10000)
-#X, y , X_train, y_train, X_test, y_test = dataset.get_coil20_data()
-RBM = Autoencoder(layer_dim)
-#RBM.pretrain(X_train.T, epochs=15)
-#RBM.save('Models/weightsRBM/coil20')
-#RBM = RBM.pretrained_from_file('Models/weightsRBM/MNIST60000')
+model_type = 'par' # par/reg/auto/PCA/kernel
+data_name = 'MNIST' # MNIST/ COIL20
+n_train = 20000
+n_test = 10000
+batch_size = 1000
+d_components = 2
+train_RBM =True
+train_NN = True
+show_plot = True
+epochs = 10
+X, y , X_train, y_train, X_test, y_test = dataset.get_data(name=data_name, n_train=n_train, n_test=n_test)
+
+
+# hyperparameters
+labdas = [0.7, 0.9, 0.99]
+c = 0.1
+
+#training RBM
+file_path_weights = 'Models/weightsRBM/' + data_name + '/' + data_name + str(n_train) + 'dim' + str(d_components)
+
+if train_RBM:
+    if data_name == 'MNIST':
+        layer_dim = [784, 500, 500, 2000, d_components]
+    elif data_name == 'COIL20':
+        layer_dim = [1024, 500, 500, 2000, d_components]
+    make_dir(file_path_weights)
+    RBM = Autoencoder(layer_dims=layer_dim)
+    RBM.pretrain(X_train.T, epochs=10)
+    RBM.save(file_path_weights)
+
+# training neural network
+
+
+if train_NN:
+    if model_type == 'reg':
+        for labda in labdas:
+            file_path_NN = 'Models/regularized/' + data_name + str(n_train) + model_type + 'dim' + str(d_components) + '_' +str(labda)
+            model = neuralREG_tSNE(epochs=100, batch_size=batch_size, lr=0.01, labda=labda)
+            losses = model.train(X_train)
+            model.save(file_path_NN)
+            np.savetxt(file_path_NN + 'losses.csv', losses, delimiter=',')
+    elif model_type == 'par':
+        file_path_NN = 'Models/parametric/' + data_name + str(n_train) + model_type + 'dim' + str(d_components)
+        model = neural_tSNE(epochs=100, batch_size=batch_size, lr=0.01)
+        losses = model.train(X_train)
+        model.save(file_path_NN)
+        np.savetxt(file_path_NN + 'losses.csv', losses, delimiter=',')
+    elif model_type == 'auto':
+        file_path_NN = 'Models/parametric/' + data_name + str(n_train) + model_type + 'dim' + str(d_components)
+        model = neuralREG_tSNE(epochs=100, batch_size=batch_size, lr=0.01, labda=0)
+        losses = model.train(X_train)
+        model.save(file_path_NN)
+        np.savetxt(file_path_NN + 'losses.csv', losses, delimiter=',')
+
+    if show_plot:
+        Y_train = model.predict(X_train)
+        Y_test = model.predict(X_test)
+        if data_name == 'MNIST':
+            plot(Y_train, y_train, s=1, linewidth=0.2,cmap='Paired', title= 'MNIST train ' +str(n_train))
+            plot(Y_test, y_test, s=1, linewidth=0.2, cmap='Paired', title='MNIST test ' + str(n_test))
+        elif data_name == 'COIL20':
+            plot(Y_train, y_train, s=1, linewidth=0.2, cmap='gist_rainbow', title='COIL20 train ' + str(n_train))
+            plot(Y_test, y_test, s=1, linewidth=0.2, cmap='gist_rainbow', title='COIL20 test ' + str(n_test))
+
+
+''' 
+dims = [10, 20]
+for d in dims:
+    layer_dim = [1024,500,500,2000, 2]
+    RBM = Autoencoder(layer_dim)
+    RBM.pretrain(X.T, epochs=10)
+    RBM.save('Models/weightsRBM/coil20dim' + str(d))
+  '''
+'''
+RBM = Autoencoder([784, 500, 500, 2000, 2])
+RBM.pretrain(X_train.T, epochs=4)
+make_dir('Models/weightsNoGibbs/')
+RBM.save('Models/weightsNoGibbs/MNIST20000vis')
+#RBM = RBM.pretrained_from_file('Models/weightsNoGibbs/MNIST20000')
 #autoencoder, encoder, decoder = RBM.unroll()
 #autoencoder.save('autoencoderRBMcoil20')
 #encoder.summary()
 #autoencoder.summary()
 #decoder.summary()
 
-'''
+
 neural_model = neural_tSNE(epochs=50, batch_size=1000, lr=0.01)
 
 #neural_model.build_nn(1024)
-neural_model.load_RBM('Models/weightsRBM/MNIST60000', layer_dim)
+neural_model.load_RBM('Models/weightsnoGibbs/MNIST20000', layer_dim)
 losses = neural_model.train(X_train)
-np.savetxt('Models/parametric/MNISTrbm100epochlosses.csv', losses, delimiter=',')
-neural_model.save('Models/parametric/MNISTpar2epoch100RBM')
+#np.savetxt('Models/parametric/MNISTrbm100epochlosses.csv', losses, delimiter=',')
+#neural_model.save('Models/parametric/MNISTpar2epoch100RBM')
 #neural_model.load_model('Models/coil20/parEncoderRBM')
 #neural_model.load_model(model)
 Y = neural_model.predict(X_train)
@@ -42,20 +117,23 @@ plot(Y, y_test, s=1, linewidth=0.1, cmap='gist_rainbow', title='test coil20 960 
 
 
 
-'''
+
 dir = 'Models/autoencoder/'
-file_path = 'MNISTauto2noRBMtest'
-neuralREG_model = neuralREG_tSNE(epochs=50, batch_size=1000, lr=0.05, labda=0.0)
+file_path = 'MNISTauto2newRBMtest'
+neuralREG_model = neuralREG_tSNE(epochs=100, batch_size=5000, lr=0.01, labda=0.0)
 
-neuralREG_model.build(784)
-
+#neuralREG_model.build(784)
 #neuralREG_model.load_model('Models/autoencoder/MNISTauto2RBM')
+neuralREG_model.load_RBM('Models/weightsNoGibbs/MNIST20000', [784, 500, 500, 2000, 2])
 #neuralREG_model.load_RBM('Models/weightsRBM/MNIST60000', layer_dim)
+neuralREG_model.model.summary()
+neuralREG_model.encoder.summary()
+neuralREG_model.decoder.summary()
 losses = neuralREG_model.train(X_train)
 
 #neuralREG_model.load_model('Models/coil20/regautoEncoderRBM')
-neuralREG_model.save(dir + file_path )
-np.savetxt(dir + file_path + 'losses.csv', losses, delimiter=',')
+#neuralREG_model.save(dir + file_path )
+#np.savetxt(dir + file_path + 'losses.csv', losses, delimiter=',')
 Y = neuralREG_model.predict(X_train)
 print(Y)
 print(y)
@@ -67,3 +145,6 @@ plot(Y, y_train, s=1, linewidth=0.1, cmap='Paired', title='training mnist diff l
 
 YY = neuralREG_model.predict(X_test)
 plot(YY, y_test, s=1, linewidth=0.1, cmap='Paired', title='test mnist diff loss labda = 0.0')
+print(Y.shape)
+print(YY.shape)
+'''

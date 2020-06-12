@@ -81,7 +81,7 @@ class neural_tSNE:
         return losses
     def predict(self, X):
         """
-        Makes prediction for a given data set X nxD
+        Makes encoded prediction for a given data set X nxD
         """
         if self.model == None:
             print("Train the model first!")

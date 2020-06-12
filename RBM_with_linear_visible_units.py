@@ -3,7 +3,7 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-
+from time import time
 from RBM import *
 
 learning_rate = 0.001
@@ -51,7 +51,7 @@ class RBM_with_linear_visible_units(RBM):
         DW = np.zeros((self.v_dim, self.h_dim))
         Da = np.zeros((self.v_dim, 1))
         Db = np.zeros((self.h_dim, 1))
-
+        t0 = time()
         # initialize weights and parameters
         if initialize_weights == True:
             self.W = np.random.normal(0., 0.1, size=(self.v_dim, self.h_dim))
@@ -71,8 +71,7 @@ class RBM_with_linear_visible_units(RBM):
 
             for j in range(num_minibatches):
                 # get the next batch, this part changes for linear visible units
-                v_pos_probs = x[:, j * batch_size:(j + 1) * batch_size] # real valued
-                v_pos_states = v_pos_probs + np.random.normal(0., 1., size=v_pos_probs.shape) # sigma = 1
+                v_pos_states= x[:, j * batch_size:(j + 1) * batch_size] # real valued
 
                 # get hidden probs, positive product, and sample hidden states
                 h_pos_probs = self.h_probs(v_pos_states)
@@ -81,13 +80,15 @@ class RBM_with_linear_visible_units(RBM):
 
                 # get negative probs and product
                 v_neg_probs = self.v_probs(h_pos_states)
-                h_neg_probs = self.h_probs(v_neg_probs)
-                neg_prods = v_neg_probs[:, np.newaxis, :] * h_neg_probs[np.newaxis, :, :]
+                v_neg_states= v_neg_probs + np.random.normal(0., 1., size=v_neg_probs.shape) # sigma = 1
+
+                h_neg_probs = self.h_probs(v_neg_states)
+                neg_prods = v_neg_states[:, np.newaxis, :] * h_neg_probs[np.newaxis, :, :]
 
                 # compute the gradients, averaged over minibatch, with momentum and regularization
                 cd = np.mean(pos_prods - neg_prods, axis=2)
                 DW = momentum * DW + learning_rate * (cd - weightcost * self.W)
-                Da = momentum * Da + learning_rate * np.mean(v_pos_states - v_neg_probs, axis=1, keepdims=True)
+                Da = momentum * Da + learning_rate * np.mean(v_pos_states - v_neg_states, axis=1, keepdims=True)
                 Db = momentum * Db + learning_rate * np.mean(h_pos_probs - h_neg_probs, axis=1, keepdims=True)
 
                 # update weights and biases
@@ -99,11 +100,11 @@ class RBM_with_linear_visible_units(RBM):
                 error = np.mean((v_pos_states - v_neg_probs) ** 2)
                 error_sum = error_sum + error
 
-            print("Reconstruction MSE = %.2f" % error_sum)
+            print("Epoch: %d Reconstruction MSE: %.4f elapsed time: %.2f" % (i + 1, error_sum, time() - t0))
             error_sum = 0.
 
 
-        return
+        return self.h_probs(x)
 
     def gibbs_sampling(self, n=1, m=1, v=None):
         '''

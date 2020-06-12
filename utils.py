@@ -392,7 +392,7 @@ def continuity(X, y, k_neighbors):
 
     return continuities
 
-def plot(Y, labels, title='',marker = None ,label = False, cmap= None, s=15, save_path=None, linewidth=1):
+def plot(Y, labels, title='',marker = None ,label = False, cmap= None, s=15, save_path=None, linewidth=1, axis = 'off'):
     fig, ax = plt.subplots()
 
     if marker == None:
@@ -401,13 +401,13 @@ def plot(Y, labels, title='',marker = None ,label = False, cmap= None, s=15, sav
         cmap = cm.get_cmap(cmap, len(marker))
         for i, e in enumerate(marker):
             ax.scatter(Y[:,0][labels==i], Y[:,1][labels==i], c =np.array([cmap(i)]), s=s, linewidths= linewidth, marker = '$'+marker[i]+'$' )
-    #ax.set_xlabel('dim 1')
-    #ax.set_ylabel('dim 2')
+
     ax.set_title(title)
-    #ax.xaxis.set_major_formatter(NullFormatter())
-    #ax.yaxis.set_major_formatter(NullFormatter())
-    #fig.patch.set_visible(False)
-    #ax.axis('off')
+    if axis == 'off':
+        ax.xaxis.set_major_formatter(NullFormatter())
+        ax.yaxis.set_major_formatter(NullFormatter())
+        fig.patch.set_visible(False)
+        ax.axis('off')
     if label:
         plt.legend(*scatter.legend_elements(), loc="upper right", title='Labels', prop={'size': 6}, fancybox=True)
     fig.tight_layout()

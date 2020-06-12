@@ -168,6 +168,27 @@ class Dataset:
 
 
 
+
+# helper function
+    def get_data(self, name, n_train, n_test):
+        if( name == 'MNIST'):
+            return self.get_MNIST_data(n_train=n_train, n_test=n_test)
+        elif(name == 'COIL20'):
+            return self.get_coil20_data()
+        elif(name == 'IRIS'):
+            return self.get_IRIS_data(n_train=n_train, n_test=n_test)
+        elif(name == 'LETTER'):
+            return self.get_LETTER_data(n_train=n_train, n_test=n_test)
+        elif(name == 'CIFAR10'):
+            return self.get_CIFAR10_data(n_train=n_train, n_test=n_test)
+        elif(name == 'SWISS'):
+            return self.get_SWISS_data()
+        elif(name == 'IRIS'):
+            return self.get_IRIS_data(n_train=n_train, n_test=n_test)
+        else:
+            print('No dataset with that name!')
+
+
 if __name__ == '__main__':
     dataset = Dataset(0)
     fig = plt.figure()

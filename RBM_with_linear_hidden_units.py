@@ -13,7 +13,7 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-
+from time import time
 from RBM import *
 
 learning_rate = 0.001
@@ -61,7 +61,7 @@ class RBM_with_linear_hidden_units(RBM):
         DW = np.zeros((self.v_dim, self.h_dim))
         Da = np.zeros((self.v_dim, 1))
         Db = np.zeros((self.h_dim, 1))
-
+        t0 = time()
         # initialize weights and parameters
         if initialize_weights == True:
             self.W = np.random.normal(0., 0.1, size=(self.v_dim, self.h_dim))
@@ -108,11 +108,11 @@ class RBM_with_linear_hidden_units(RBM):
                 error = np.mean((v_pos_states - v_neg_probs) ** 2)
                 error_sum = error_sum + error
 
-            print("Reconstruction MSE = %.2f" % error_sum)
+            print("Epoch: %d Reconstruction MSE: %.4f elapsed time: %.2f" % (i + 1, error_sum, time() - t0))
             error_sum = 0.
 
 
-        return
+        return self.h_probs(x)
 
     def gibbs_sampling(self, n=1, m=1, v=None):
         '''
