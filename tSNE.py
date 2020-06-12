@@ -4,7 +4,7 @@
 import numpy as np
 from time import time
 from utils import profile, shannon_entropy, cond_probs, joint_average_P, joint_Q, pca, make_dir, plot
-#from datasets import Dataset
+from datasets import Dataset
 class tsne:
     """
     Class for t-SNE makes an object with the corresponding parameters.
@@ -206,17 +206,21 @@ class tsne:
 
 if __name__ == '__main__':
     seed = 0
-    directory = 'results/tSNE/COIL20'
-    dataset = Dataset(seed)
-    #X, y, X_train, y_train, X_test, y_test = dataset.get_MNIST_data(n_train=10000)
-    X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
-    model = tsne(random_state=0, initialization='PCA', initial_dims=30, grad_method='ADAM', perplexity=40,
-                 max_iter=1000, learning_rate=0.01)
 
+    dataset = Dataset(seed)
+    d_components = 2
+    data_name = 'MNIST'
+    n_train = 15000
+    X, y, X_train, y_train, X_test, y_test = dataset.get_data(data_name, n_train, 10000)
+    #X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
+    model = tsne(random_state=0, initialization='PCA', initial_dims=30, grad_method='ADAM', perplexity=40,
+                 max_iter=1000,d_components=d_components, learning_rate=0.01)
+
+    file_path = 'results/tSNE/' + data_name + str(n_train) + 'dim' + str(d_components)
     Y, cost = model.transform(X_train)
-    make_dir(directory)
-    np.savetxt(directory + 'Y2.csv', Y, delimiter=',')
-    np.savetxt(directory + 'cost.csv', cost, delimiter=',')
+    make_dir(file_path)
+    np.savetxt(file_path + 'Y2.csv', Y, delimiter=',')
+    np.savetxt(file_path + 'cost.csv', cost, delimiter=',')
 
     plot(Y, y_train, cmap='Paired', s = 1, linewidth= 0.1)
 

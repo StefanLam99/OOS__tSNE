@@ -8,7 +8,7 @@ from keras.datasets import cifar10
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 from utils import plot
-from tSNE import *
+
 class Dataset:
 
     def __init__(self, seed):
@@ -40,7 +40,7 @@ class Dataset:
         X_test.astype(np.float32, copy=False)
         X_test = X_test/ 255 # RGB values are max 255
 
-        return X, y, X_train, y_train, X_test, y_test
+        return X_train, y_train, X_train, y_train, X_test, y_test
 
     def get_CIFAR10_data(self, n_train = 3000, n_test = 1000):
         '''
@@ -204,12 +204,6 @@ if __name__ == '__main__':
     print(X[:,2])
     ax.scatter3D(X[:,0], X[:,1], X[:,2], c = labels, cmap='Paired', s=2, linewidths=0.1)
     plt.show()
-    model = tsne(random_state=0, initialization=None, grad_method='ADAM', perplexity=40,
-                 max_iter=1000, learning_rate=0.01)
-
-    Y, cost = model.transform(X)
-
-    plot(Y, labels, cmap='Paired', s=1, linewidth=0.1)
 
 
 
