@@ -170,7 +170,7 @@ class Dataset:
 
 
 # helper function
-    def get_data(self, name, n_train, n_test):
+    def get_data(self, name=None, n_train=0, n_test=0):
         if( name == 'MNIST'):
             return self.get_MNIST_data(n_train=n_train, n_test=n_test)
         elif(name == 'COIL20'):

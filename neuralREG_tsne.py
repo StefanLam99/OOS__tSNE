@@ -89,7 +89,7 @@ class neuralREG_tSNE:
         losses = []
 
         n_sample, n_feature = X_train.shape
-        nBatches = int(ceil(n_sample/self.batch_size))
+        nBatches = int(n_sample/self.batch_size)
         for epoch in range(self.epochs):
             new_indices = np.random.permutation(n_sample) # shuffle data for new random batches
             X = X_train[new_indices]

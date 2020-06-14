@@ -14,21 +14,26 @@ from neuralREG_tsne import *
 # initialization dataset/model
 seed = 0
 dataset = Dataset(seed)
-model_type = 'par' # par/reg/auto/PCA/kernel
-data_name = 'COIL20' # MNIST/ COIL20
-n_train = 960
-n_test = 480
-batch_size = 960
-d_components = 2
+model_type = 'reg' # par/reg/auto/PCA/kernel
+data_name = 'MNIST' # MNIST/ COIL20
+if data_name == 'COIL20':
+    n_train = 960
+    n_test = 480
+    batch_size = 480
+elif data_name == 'MNIST':
+    n_train = 10000
+    n_test = 5000
+    batch_size = 1000
+d_components = 10
 train_RBM = False
 train_NN = True
-show_plot = True
+show_plot = False
 epochs = 50
 X, y , X_train, y_train, X_test, y_test = dataset.get_data(name=data_name, n_train=n_train, n_test=n_test)
 
 
 # hyperparameters
-labdas = [0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+labdas = [0.1] #[0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
 c = 0.1
 
 # training RBM
@@ -46,7 +51,8 @@ if train_RBM:
     RBM.save(file_path_weights)
 
 # training neural network
-
+model = None
+file_path_NN = None
 if model_type == 'par':
     file_path_NN = 'Models/parametric/' + data_name + str(n_train) + model_type + 'dim' + str(d_components)
     model = neural_tSNE(epochs=epochs, batch_size=batch_size, lr=0.01)
@@ -56,14 +62,15 @@ elif model_type == 'auto':
     model = neuralREG_tSNE(epochs=epochs, batch_size=batch_size, lr=0.01, labda=0)
     model.load_RBM(file_path_weights, layer_dim)
 
-labdas = [-1]
+lambdas = [-1]
 models = [model]
 file_paths = [file_path_NN]
 
 if model_type == 'reg':
     models = []
     file_paths = []
-    for labda in labdas:
+    lambdas = labdas
+    for labda in lambdas:
         file_path_NN = 'Models/regularized/' + data_name + str(n_train) + model_type + 'dim' + str(d_components) + '_' +str(labda)
         file_paths.append(file_path_NN)
         model = neuralREG_tSNE(epochs=epochs, batch_size=batch_size, lr=0.01, labda=labda)
@@ -71,7 +78,7 @@ if model_type == 'reg':
         models.append(model)
 
 if train_NN:
-    for i, labda in enumerate(labdas):
+    for i, labda in enumerate(lambdas):
         model = models[i]
         losses = model.train(X_train)
         model.save(file_paths[i])
@@ -79,13 +86,14 @@ if train_NN:
 
 
 if show_plot:
-    for i, labda in enumerate(labdas):
-        Y_train = model.predict(X_train)
-        Y_test = model.predict(X_test)
-        if data_name == 'MNIST':
+    for i, labda in enumerate(lambdas):
+        models[i].load_model(file_paths[i])
+        Y_train = models[i].predict(X_train)
+        Y_test = models[i].predict(X_test)
+        if data_name == 'MNIST' and d_components==2:
             plot(Y_train, y_train, s=1, linewidth=0.2,cmap='Paired', title= 'MNIST train ' +str(n_train)+' ' +model_type+ ' labda = ' + str(labda))
             plot(Y_test, y_test, s=1, linewidth=0.2, cmap='Paired', title='MNIST test ' + str(n_test)+' ' +model_type+ ' labda = ' + str(labda))
-        elif data_name == 'COIL20':
+        elif data_name == 'COIL20' and d_components==2:
             plot(Y_train, y_train, s=1, linewidth=0.2, cmap='gist_rainbow', title='COIL20 train ' + str(n_train)+' ' +model_type+ ' labda = ' + str(labda))
             plot(Y_test, y_test, s=1, linewidth=0.2, cmap='gist_rainbow', title='COIL20 test ' + str(n_test)+' ' +model_type+ ' labda = ' + str(labda))
 
