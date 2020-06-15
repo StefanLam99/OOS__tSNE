@@ -208,21 +208,23 @@ if __name__ == '__main__':
     seed = 0
 
     dataset = Dataset(seed)
-    d_components = 2
+    d_components = [2]
     data_name = 'MNIST'
-    n_train = 15000
+    n_train = 10000
     X, y, X_train, y_train, X_test, y_test = dataset.get_data(data_name, n_train, 10000)
     #X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
-    model = tsne(random_state=0, initialization='PCA', initial_dims=30, grad_method='ADAM', perplexity=40,
-                 max_iter=1000,d_components=d_components, learning_rate=0.01)
 
-    file_path = 'results/tSNE/' + data_name + str(n_train) + 'dim' + str(d_components)
-    Y, cost = model.transform(X_train)
-    make_dir(file_path)
-    np.savetxt(file_path + 'Y2.csv', Y, delimiter=',')
-    np.savetxt(file_path + 'cost.csv', cost, delimiter=',')
+    for d in d_components:
+        model = tsne(random_state=0, initialization='PCA', initial_dims=30, grad_method='ADAM', perplexity=40,
+                     max_iter=1000,d_components=d, learning_rate=0.1)
 
-    plot(Y, y_train, cmap='Paired', s = 1, linewidth= 0.1)
+        file_path = 'results/tSNE/' + data_name + str(n_train) + 'dim' + str(d)
+        Y, cost = model.transform(X_train)
+        make_dir(file_path)
+        np.savetxt(file_path + 'Y2.csv', Y, delimiter=',')
+        np.savetxt(file_path + 'cost.csv', cost, delimiter=',')
+
+        #plot(Y, y_train, cmap='Paired', s = 1, linewidth= 0.1)
 
 
 
