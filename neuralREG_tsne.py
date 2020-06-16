@@ -79,12 +79,15 @@ class neuralREG_tSNE:
         self.encoder.summary()
         self.decoder.summary()
 
-    def train(self, X_train):
+    def train(self, X_train, noisy = False):
         """
         Train the regularized parametric t-SNE network
         """
         print('Start training the neural network...')
-
+        y_train = X_train
+        if noisy:
+            noise = np.random.normal(0, 0.01 ** 0.5, (X_train.shape))
+            X_train = X_train + noise
         begin = time()
         losses = []
 
@@ -93,10 +96,11 @@ class neuralREG_tSNE:
         for epoch in range(self.epochs):
             new_indices = np.random.permutation(n_sample) # shuffle data for new random batches
             X = X_train[new_indices]
+            Y = y_train[new_indices]
             loss = 0
 
             for i in range(nBatches):
-
+                batch_y = Y[i*self.batch_size:(i+1)*self.batch_size]
                 batch = X[i*self.batch_size:(i+1)*self.batch_size]
                 if self.labda > 0: # runs faster this way
                     blockPrint()
@@ -106,9 +110,9 @@ class neuralREG_tSNE:
                     if self.labda == 1: # parametric t-sne
                         all_losses = self.encoder.train_on_batch(x=batch, y={'encoded': P})
                     else: # regularized parametric t-sne
-                        all_losses = self.model.train_on_batch(x=batch, y={'encoded': P, 'decoded': batch})
+                        all_losses = self.model.train_on_batch(x=batch, y={'encoded': P, 'decoded': batch_y})
                 else: # autoencoder with mse loss
-                    all_losses = self.model.train_on_batch(x=batch, y={'decoded': batch})
+                    all_losses = self.model.train_on_batch(x=batch, y={'decoded': batch_y})
 
                 loss += np.array(all_losses)
 

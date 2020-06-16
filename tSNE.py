@@ -208,17 +208,23 @@ if __name__ == '__main__':
     seed = 0
 
     dataset = Dataset(seed)
-    d_components = [2]
-    data_name = 'MNIST'
+    d_components = [2, 10, 20]
+    data_name = 'COIL20'
+    grad_method = 'gains'
     n_train = 10000
     X, y, X_train, y_train, X_test, y_test = dataset.get_data(data_name, n_train, 10000)
     #X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
 
     for d in d_components:
-        model = tsne(random_state=0, initialization='PCA', initial_dims=30, grad_method='ADAM', perplexity=40,
-                     max_iter=1000,d_components=d, learning_rate=0.1)
+        if grad_method == 'ADAM':
+            model = tsne(random_state=0, initialization='PCA', initial_dims=30, grad_method='ADAM', perplexity=40,
+                         max_iter=1000, d_components=d, learning_rate=0.1)
+        elif grad_method =='gains':
+            model = tsne(random_state=0, initialization='PCA', initial_dims=30, grad_method='gains', perplexity=40,
+                     max_iter=1000, d_components=d, learning_rate=100)
 
-        file_path = 'results/tSNE/' + data_name + str(n_train) + 'dim' + str(d)
+        file_path = 'Models/tSNE/' + data_name + str(n_train) + 'dim' + str(d) + grad_method
+        make_dir(file_path)
         Y, cost = model.transform(X_train)
         make_dir(file_path)
         np.savetxt(file_path + 'Y2.csv', Y, delimiter=',')

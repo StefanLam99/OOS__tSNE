@@ -10,7 +10,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 seed = 0
 dataset = Dataset(seed)
 model_type = 'reg' # par/reg/auto/PCA/kernel
-data_name = 'MNIST' # MNIST/ COIL20
+data_name = 'COIL20' # MNIST/ COIL20
 if data_name == 'COIL20':
     n_train = 960
     n_test = 480
@@ -20,7 +20,7 @@ elif data_name == 'MNIST':
     n_test = 5000
     batch_size = 1000
 
-d_componentss = [10, 20]
+d_componentss = [5]
 epochs = 30
 X, labels, X_train, labels_train, X_test, labels_test = dataset.get_data(name=data_name, n_train=n_train, n_test=n_test)
 
