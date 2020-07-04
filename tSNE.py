@@ -10,7 +10,7 @@ class tsne:
     Class for t-SNE makes an object with the corresponding parameters.
     """
     def __init__(self, d_components=2, initial_dims=30, initialization='PCA', perplexity=40, dof=1., early_exaggeration=4,
-                 random_state=None, data_name = '', grad_method = 'gains', max_iter =1000, initial_momentum=0.5, final_momentum=0.8, learning_rate = 500):
+                 random_state=None, data_name = '', grad_method = 'gains', max_iter =1000, initial_momentum=0.5, final_momentum=0.8, learning_rate = 500.0):
         self.d_components = d_components # dimension of projection space
         self.initial_dims = initial_dims # initial dimensions of data, before applying t-sne
         self.initialization = initialization # initialization method if there is one, defaults to PCA and uses initial_dims
@@ -38,7 +38,7 @@ class tsne:
         dY = np.zeros((n, self.d_components)) # gradient
         iY = np.zeros((n, self.d_components))# used for momemntum
         gains = np.ones((n, self.d_components)) # adaptive
-
+        mean_abs_dY = np.zeros((self.max_iter, self.d_components))
         t0 = time()
         for iter in range(self.max_iter):
             Q, num = joint_Q(Y, self.dof)
@@ -63,15 +63,16 @@ class tsne:
 
             # Compute cost function
             cost[iter] = np.sum(P * np.log(P / Q))
+            mean_abs_dY[iter, :] = np.mean(np.abs(dY), axis=0)
             if (iter + 1) % 10 == 0:
                 C = np.sum(P * np.log(P / Q))
-                print("Iteration: %d cost: %.4f elapsed time: %.2f" % (iter + 1, C, time() - t0))
+                print("Iteration: %d cost: %.4f Mean Absolute gradient value: %s elapsed time: %.2f " % (iter + 1, C, str(mean_abs_dY[iter,:]),time() - t0))
 
             # Stop the early exaggeration
             if iter == 100:
                 P = P / self.early_exaggeration
-        return Y, cost
-
+        np.savetxt('Models/probs/COIL20dim2gains.csv', Q, delimiter=',')
+        return Y, cost, mean_abs_dY
 
     def grad_descent_ADAM(self, X, Y, P ):
         '''
@@ -83,14 +84,14 @@ class tsne:
         (n, d) = X.shape
         cost = np.zeros(self.max_iter)
         dY = np.zeros((n, self.d_components)) # gradient
-
+        mean_abs_dY = np.zeros((self.max_iter, self.d_components))
         alpha = self.learning_rate
         beta_1 = 0.85
         beta_2 = 0.9  # initialize the values of the parameters
         epsilon = 1e-8
 
-        m_t = np.zeros((n, self.d_components))
-        v_t = np.zeros((n, self.d_components))
+        m_t = np.zeros((n, self.d_components))# first moment
+        v_t = np.zeros((n, self.d_components))# second moment
         t0 = time()
         for iter in range(self.max_iter):
             t = iter + 1
@@ -108,30 +109,27 @@ class tsne:
 
             # Compute cost function
             cost[iter] = np.sum(P * np.log(P / Q))
+            mean_abs_dY[iter, :] = np.mean(np.abs(dY), axis=0)
             if (iter + 1) % 10 == 0:
                 C = np.sum(P * np.log(P / Q))
-                print("Iteration: %d cost: %.4f elapsed time: %.2f" % (iter + 1, C, time() - t0))
+                print("Iteration: %d cost: %.4f Mean Absolute gradient value: %s elapsed time: %.2f " % (iter + 1, C, str(mean_abs_dY[iter,:]),time() - t0))
 
             # Stop the early exaggeration
             if iter == 100:
                 P = P / self.early_exaggeration
-
-
-        return Y, cost
+        np.savetxt('Models/probs/COIL20dim2ADAM.csv', Q, delimiter=',')
+        return Y, cost, mean_abs_dY
 
     def grad_descent(self, X, Y, P):
         '''
-        Gradient descent according to the method described in (Maaten & Hinton 2008)
-        Y is the initial solution
+        Regular gradient descent Y is the initial solution
         '''
         P = P * self.early_exaggeration
         (n, d) = X.shape
         cost = np.zeros(self.max_iter)
 
-
         dY = np.zeros((n, self.d_components)) # gradient
-        iY = np.zeros((n, self.d_components))# used for momemntum
-
+        mean_abs_dY = np.zeros((self.max_iter, self.d_components))
 
         t0 = time()
         for iter in range(self.max_iter):
@@ -148,14 +146,15 @@ class tsne:
 
             # Compute cost function
             cost[iter] = np.sum(P * np.log(P / Q))
+            mean_abs_dY[iter, :] = np.mean(np.abs(dY), axis=0)
             if (iter + 1) % 10 == 0:
                 C = np.sum(P * np.log(P / Q))
-                print("Iteration: %d cost: %.4f elapsed time: %.2f" % (iter + 1, C, time() - t0))
+                print("Iteration: %d cost: %.4f Mean Absolute gradient value: %s elapsed time: %.2f " % (iter + 1, C, str(mean_abs_dY[iter,:]),time() - t0))
 
             # Stop the early exaggeration
             if iter == 100:
                 P = P / self.early_exaggeration
-        return Y, cost
+        return Y, cost, mean_abs_dY
 
     @profile
     def transform(self, X):
@@ -186,32 +185,33 @@ class tsne:
         print("Start gradient descent...")
         t0 = time()
         if self.grad_method == 'ADAM':
-            Y, cost = self.grad_descent_ADAM(X, Y, P)
+            Y, cost, grad_value = self.grad_descent_ADAM(X, Y, P)
         elif self.grad_method == 'gains':
-            Y, cost = self.grad_descent_gains(X, Y, P)
+            Y, cost, grad_value = self.grad_descent_gains(X, Y, P)
         elif self.grad_method == 'SGD':
-            Y, cost = self.grad_descent(X, Y, P)
+            Y, cost, grad_value = self.grad_descent(X, Y, P)
 
         #np.savetxt('results/' + self.data_name + '/' +self.grad_method  + 'cost' + str(self.d_components) +'.csv', cost, delimiter=',' )
         #np.savetxt('results/' + self.data_name + '/'+ self.grad_method +  'Y' +str(self.d_components) +'.csv', Y, delimiter=',')
 
 
         print("Gradient descent took %.4f seconds" % (time() - t0))
-        print("Transforming X took %.4f seconds"% (time() - begin))
-        # Return solution
-        return Y, cost
+
+        return Y, cost, grad_value
 
 
 
 
 if __name__ == '__main__':
+    '''
+    main to implement tSNE on the datasets
+    '''
     seed = 0
-
     dataset = Dataset(seed)
-    d_components = [2, 10, 20]
+    d_components = [2]
     data_name = 'COIL20'
     grad_method = 'gains'
-    n_train = 10000
+    n_train = 960
     X, y, X_train, y_train, X_test, y_test = dataset.get_data(data_name, n_train, 10000)
     #X, y, X_train, y_train, X_test, y_test = dataset.get_coil20_data()
 
@@ -222,14 +222,17 @@ if __name__ == '__main__':
         elif grad_method =='gains':
             model = tsne(random_state=0, initialization='PCA', initial_dims=30, grad_method='gains', perplexity=40,
                      max_iter=1000, d_components=d, learning_rate=100)
+        elif grad_method == 'SGD':
+            model = tsne(random_state=0, initialization='PCA', initial_dims=30, grad_method='SGD', perplexity=40,
+                         max_iter=1000, d_components=d, learning_rate=100)
 
         file_path = 'Models/tSNE/' + data_name + str(n_train) + 'dim' + str(d) + grad_method
         make_dir(file_path)
-        Y, cost = model.transform(X_train)
+        Y, cost, grad_value = model.transform(X_train)
         make_dir(file_path)
         np.savetxt(file_path + 'Y2.csv', Y, delimiter=',')
         np.savetxt(file_path + 'cost.csv', cost, delimiter=',')
-
+        np.savetxt(file_path + 'grad_value.csv', grad_value, delimiter=',')
         #plot(Y, y_train, cmap='Paired', s = 1, linewidth= 0.1)
 
 

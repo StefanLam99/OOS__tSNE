@@ -1,3 +1,6 @@
+'''
+Regularized Parametric t-SNE
+'''
 from matplotlib import pyplot as plt
 import numpy as np
 import keras
@@ -14,10 +17,16 @@ from RBM import RBM
 from keras.losses import mse, binary_crossentropy
 import keras.losses
 from utils import *
-from autoencoder import Autoencoder
+from pretrain_autoencoder import Autoencoder
+
+
 class neuralREG_tSNE:
+    '''
+    Class to make a model for parametric t-SNE, RP t-SNE, and regular autoencoders
+    depending on value of theta
+    '''
     def __init__(self, data_name ='',d_components=2,  perplexity=40., epochs=100, lr=0.001, random_state=0, batch_size=100,encoder=None, decoder=None,
-                 model=None, labda=0.99, toTrain = True):
+                 model=None, theta=0.99):
         self.d_components = d_components
         self.perplexity = perplexity
         self.data_name = data_name
@@ -29,13 +38,8 @@ class neuralREG_tSNE:
         self.model = model # gonna be the autoencoder
         self.encoder = encoder
         self.decoder = decoder
-        self.labda = labda
-        ''' 
-        if toTrain is False:
-            #keras.losses.kl_loss = self.kl_loss
-            keras.losses.kl_loss = self.mse_loss
-            keras.losses.kl_loss = mse
-        '''
+        self.theta  = theta
+
 
     def build(self, n_input, layer_sizes = np.array([500, 500, 2000]), activations= np.array(['sigmoid','sigmoid','sigmoid'])):
         ''''
@@ -71,8 +75,8 @@ class neuralREG_tSNE:
         decoded = decoder_input
         n_encoder_layers = int(len(self.model._layers) / 2) + 1
         for i in range(n_encoder_layers-1):
-
             decoded = self.model._layers[n_encoder_layers+i](decoded)
+
         self.decoder = Model(decoder_input, decoded)
         self.set_compiler()
         autoencoder.summary()
@@ -84,6 +88,7 @@ class neuralREG_tSNE:
         Train the regularized parametric t-SNE network
         """
         print('Start training the neural network...')
+        X_train = X_train.copy()
         y_train = X_train
         if noisy:
             noise = np.random.normal(0, 0.01 ** 0.5, (X_train.shape))
@@ -102,12 +107,12 @@ class neuralREG_tSNE:
             for i in range(nBatches):
                 batch_y = Y[i*self.batch_size:(i+1)*self.batch_size]
                 batch = X[i*self.batch_size:(i+1)*self.batch_size]
-                if self.labda > 0: # runs faster this way
+                if self.theta > 0: # runs faster this way
                     blockPrint()
                     cond_p, _ = cond_probs(batch.copy(), perplexity=self.perplexity)
                     P = joint_average_P(cond_p)
                     enablePrint()
-                    if self.labda == 1: # parametric t-sne
+                    if self.theta == 1: # parametric t-sne
                         all_losses = self.encoder.train_on_batch(x=batch, y={'encoded': P})
                     else: # regularized parametric t-sne
                         all_losses = self.model.train_on_batch(x=batch, y={'encoded': P, 'decoded': batch_y})
@@ -135,6 +140,9 @@ class neuralREG_tSNE:
         return Y[0]
 
     def predict_encoder(self, X):
+        """
+        Makes encoded prediction for a given data set X nxD with the autoencoder
+        """
         if self.encoder == None:
             print("Load the encoder first!")
             return
@@ -143,6 +151,9 @@ class neuralREG_tSNE:
         return Y[0]
 
     def predict_decoder(self, X):
+        '''
+        Predicts reconstructed output from input data (NOT PROJECTIONS)
+        '''
         if self.encoder == None:
             print("Train the decoder first!")
             return
@@ -152,8 +163,9 @@ class neuralREG_tSNE:
     # loading functions:
     def load_model(self, file_path):
         '''
-        load the autoencoder
+        load the finetuned autoencoder network
         '''
+
         # setting up the autoencoder
         self.model = load_model(file_path, custom_objects={'kl_loss': self.kl_loss, 'mse_loss': self.mse_loss})
         self.set_compiler()
@@ -166,7 +178,6 @@ class neuralREG_tSNE:
         decoder_input = Input(shape=(self.d_components,))
         decoded = decoder_input
         for i in range(n_encoder_layers-1):
-
             decoded = self.model._layers[n_encoder_layers+i](decoded)
         self.decoder = Model(decoder_input, decoded)
 
@@ -181,11 +192,18 @@ class neuralREG_tSNE:
         self.encoder.compile(loss={'encoded': self.kl_loss}, optimizer=Adam(self.lr))
 
 
-    # losses
+    # losses:
+
     def mse_loss(self, X, Y):
+        '''
+        mse loss
+        '''
         return mse(X,Y)
 
     def kl_loss(self,P, Y):
+        '''
+        KL divergence of t-SNE
+        '''
         # calculate neighbor distribution Q (t-distribution) from Y
         d = self.d_components
         dof = d - 1.  # degrees of freedom for student t distribution
@@ -197,7 +215,7 @@ class neuralREG_tSNE:
         Q = (sum_act + Q) / dof
         Q = K.pow(1 + Q, -(dof + 1) / 2)
 
-        # delete diagonals
+        # delete diagonals: only pairwise similarrities are considered
         Q *= K.variable(1 - np.eye(n))
 
         #normalize
@@ -210,17 +228,24 @@ class neuralREG_tSNE:
         return C
 
     def set_compiler(self):
-        if self.labda == 1:
+        '''
+        Sets the compiler for our model depending on the theta
+        '''
+
+        if self.theta == 1:
             self.model.compile(loss={'encoded': self.kl_loss}, optimizer=Adam(self.lr))
-        elif self.labda == 0:
+        elif self.theta == 0:
             self.model.compile(loss = {'decoded': 'mse'}, optimizer=Adam(self.lr))
         else:
-            self.model.compile(loss={'encoded': self.kl_loss, 'decoded': self.mse_loss}, optimizer=Adam(self.lr),
-                                loss_weights=[self.labda, 1-self.labda])
+            self.model.compile(loss={'encoded': self.kl_loss, 'decoded': 'binary_crossentropy'}, optimizer=Adam(self.lr),
+                                loss_weights=[self.theta, (1-self.theta)])
+
+
     def save(self, file_path=None):
-        if dir==None:
-            print("File_path not specified!")
-            return
+        '''
+        simple function to save the model
+        '''
+
         make_dir(file_path)
         self.model.save(file_path)
 

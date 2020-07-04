@@ -7,25 +7,36 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from tSNE import *
-from neuralREG_tsne import neuralREG_tSNE
-from neural_tSNE import neural_tSNE
+from reg_tSNE import neuralREG_tSNE
+from par_tSNE import neural_tSNE
 seed = 0
 
 dataset = Dataset(seed)
+model_type = 'reg' # par/reg/auto/PCA/kernel
+data_name = 'COIL20' # MNIST/ COIL20
+d_components = 2
+grad_method = 'SGD'
 
-X, y , X_train, y_train, X_test, y_test= dataset.get_MNIST_data(n_train=60000, n_test=10000)
+if data_name == 'COIL20':
+    n_train = 960
+    n_test = 480
+    batch_size = 480
+    im_shape = (32,32)
+    color = 'nipy_spectral'
+elif data_name == 'MNIST':
+    n_train = 10000
+    n_test = 5000
+    batch_size = 1000
+    im_shape = (28,28)
+    color = 'Paired'
 
-regModel = neuralREG_tSNE()
-regModel.load_model('Models/regularized/MNISTreg2RBM0.5')
-Y = regModel.predict(X_test)
-plot(Y, y_test, title='test regularized', s=1, linewidth=0.1, cmap='Paired')
+X, labels, X_train, labels_train, X_test, labels_test = dataset.get_data(data_name,n_train, n_test )
 
-parModel = neural_tSNE()
-parModel.load_model('Models/parametric/MNISTpar2RBM')
-Y = parModel.predict(X_test)
-plot(Y, y_test, title='test parametric', s=1, linewidth=0.1,cmap='Paired')
+file_path = 'Models/tSNE/' + data_name + str(n_train) + 'dim' + str(d_components) + grad_method + 'Y2.csv'
+Y_gains = np.genfromtxt(file_path, delimiter = ',')
+plot(Y=Y_gains, labels=labels_train, s=1, linewidth=0.2, cmap=color, axis='off')
 
-lambdas = [0.5, 0.7, 0.9, 0.99]
-
-
+file_path = 'Models/tSNE/' + data_name + str(n_train) + 'dim' + str(d_components) + 'ADAM' + 'Y2.csv'
+Y_adam = np.genfromtxt(file_path, delimiter = ',')
+plot(Y=Y_adam, labels=labels_train, s=1, linewidth=0.2, cmap=color, title='', axis='off')
 

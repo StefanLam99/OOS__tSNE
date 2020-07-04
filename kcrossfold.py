@@ -1,6 +1,10 @@
+'''
+Code for k-fold cross validation
+'''
+
 from datasets import Dataset
 from sklearn.model_selection import KFold
-from neuralREG_tsne import neuralREG_tSNE
+from reg_tSNE import neuralREG_tSNE
 import numpy as np
 from utils import *
 from kNN import kNN
@@ -19,11 +23,9 @@ elif data_name == 'MNIST':
     n_train = 10000
     n_test = 5000
     batch_size = 1000
-
-d_componentss = [5]
+d_componentss = [2, 10, 20]
 epochs = 30
 X, labels, X_train, labels_train, X_test, labels_test = dataset.get_data(name=data_name, n_train=n_train, n_test=n_test)
-
 
 nsplits = 3
 kfold = KFold(n_splits= nsplits)
@@ -67,9 +69,8 @@ for d_components in d_componentss:
         accuracies[i] = accuracy/nsplits
         losses.append(loss/nsplits)
     print('')
-    print(accuracies)
-    print(losses)
 
+    # writing results of k-fold cross-validation in txt file
     file_path = 'Models/results/' + data_name + str(n_train) + model_type + 'dim' + str(d_components) + 'results2.txt'
     make_dir(file_path)
     with open(file_path, 'w') as file:

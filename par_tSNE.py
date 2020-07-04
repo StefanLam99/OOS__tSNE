@@ -13,11 +13,15 @@ from math import ceil
 from keras.losses import mse
 import keras.losses
 from utils import *
-from autoencoder import Autoencoder
+from pretrain_autoencoder import Autoencoder
+
 
 class neural_tSNE:
-    def __init__(self, d_components=2, perplexity=40., epochs=100, lr=0.01, random_state=0, batch_size=100, model=None, labda=0.99):
+    '''
+    Class to make a model for parametric t-SNE
+    '''
 
+    def __init__(self, d_components=2, perplexity=40., epochs=100, lr=0.01, random_state=0, batch_size=100, model=None, labda=0.99):
         self.d_components = d_components
         self.perplexity = perplexity
         self.epochs = epochs
@@ -31,14 +35,13 @@ class neural_tSNE:
 
     def build_nn(self, n_input, layer_sizes = np.array([500, 500, 2000]), activations= np.array(['sigmoid','sigmoid','linear'])):
         ''''
-        builds the structure for a multilayer feedforward neural network
+        builds the structure for an encoder network
         '''
         if self.model is not None:
             self.model = None
             print('Deleting current model for new model...')
 
         self.model = Sequential()
-        #self.model.add(Dropout(0.5, input_shape=(n_input,)))
         self.model.add(Dense(layer_sizes[0], input_dim=n_input, activation=activations[0])) # input layer
         for size, activation in zip(layer_sizes[1:], activations[1:]): # hidden layers
             self.model.add(Dense(size, activation=activation))
@@ -54,7 +57,7 @@ class neural_tSNE:
             print("We have no model!")
             return
         print('Start training the neural network...')
-
+        X_train = X_train.copy()
         begin = time()
         losses = np.zeros(self.epochs)
         n_sample, n_feature = X_train.shape
@@ -79,6 +82,8 @@ class neural_tSNE:
             epoch + 1, time() - begin, losses[epoch]))
 
         return losses
+
+
     def predict(self, X):
         """
         Makes encoded prediction for a given data set X nxD
@@ -88,10 +93,14 @@ class neural_tSNE:
             return
         return self.model.predict(X)
 
+
     def load_model(self, file_path):
-        #keras.losses.kl_loss = self.kl_loss  # otherwise keras won't recognize this loss function
-        self.model = load_model(file_path, custom_objects={'kl_loss': self.kl_loss})
+        '''
+        loads the finetuned model for parametric t-SNE
+        '''
+        self.model = load_model(file_path, custom_objects={'kl_loss': self.kl_loss}) # keras function
         self.model.compile(loss=self.kl_loss, optimizer=Adam(self.lr))
+
 
     def load_RBM(self, file_path, layer_sizes):
         '''
@@ -105,18 +114,21 @@ class neural_tSNE:
 
 
     def kl_loss(self,P, Y):
+        '''
+        KL divergence of t-SNE
+        '''
         # calculate neighbor distribution Q (t-distribution) from Y
         d = self.d_components
         dof = d - 1.  # degrees of freedom for student t distribution
         n = self.batch_size
-        eps = K.variable(10e-15) # needs to be at least 10e-8 to get anything after Q /= K.sum(Q)
+        eps = K.variable(10e-15) # needs to be at least 10e-15 to get anything after Q /= K.sum(Q)
 
         sum_act = K.sum(K.square(Y), axis=1)
         Q = K.reshape(sum_act, [-1, 1]) + -2 * K.dot(Y, K.transpose(Y))
         Q = (sum_act + Q) / dof
         Q = K.pow(1 + Q, -(dof + 1) / 2)
 
-        # delete diagonals
+        # delete diagonals: only pairwise similarities are considered.
         Q *= K.variable(1 - np.eye(n))
 
         #normalize

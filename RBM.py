@@ -1,9 +1,6 @@
-# RBM class
 '''
-    Adapted from code by Ruslan Salakhutdinov and Geoff Hinton
-    Available at: http://science.sciencemag.org/content/suppl/2006/08/04/313.5786.504.DC1
-
-    A class defining a restricted Boltzmann machine.
+    Adapted from the MatLab code by Ruslan Salakhutdinov and Geoff Hinton
+    Avilable at: http://science.sciencemag.org/content/suppl/2006/08/04/313.5786.504.DC1
 '''
 import numpy as np
 import random
@@ -18,7 +15,9 @@ def sigmoid(x):
 
 
 class RBM:
-
+    '''
+    A class that trains a RBM
+    '''
     def __init__(self, v_dim, h_dim):
         '''
             v_dim = dimension of the visible layer
@@ -107,8 +106,6 @@ class RBM:
         # initialize weights and parameters
         if initialize_weights == True:
             self.W = np.random.normal(0., 0.1, size=(self.v_dim, self.h_dim))
-            # visible bias a_i is initialized to ln(p_i/(1-p_i)), p_i = (proportion of examples where x_i = 1)
-            # self.a = (np.log(np.mean(x,axis = 1,keepdims=True)+1e-10) - np.log(1-np.mean(x,axis = 1,keepdims=True)+1e-10))
             self.a = np.zeros((self.v_dim, 1))
             self.b = np.zeros((self.h_dim, 1))
 
@@ -155,28 +152,9 @@ class RBM:
 
         return self.h_probs(x)
 
-    def gibbs_sampling(self, n=1, m=1, v=None):
-        '''
-            n - number of iterations of blocked Gibbs sampling
-            m - number of samples generated
-        '''
-        if v is None:
-            v_probs = np.full((self.v_dim, m), 0.5)
-            v = np.random.binomial(1, v_probs)
-
-        h_probs = self.h_probs(v)
-        h_states = np.random.binomial(1, h_probs)
-        for i in range(n):
-            v_probs = self.v_probs(h_states)
-            v_states = np.random.binomial(1, v_probs)
-            h_probs = self.h_probs(v_states)
-            h_states = np.random.binomial(1, h_probs)
-        return v_states, h_states
-
-
     def save(self, filename):
         '''
-            Save trained weights of self to file
+            Save trained weights
         '''
         weights = {"W": self.W, "a": self.a, "b": self.b}
         RBM.save_weights(weights, filename)

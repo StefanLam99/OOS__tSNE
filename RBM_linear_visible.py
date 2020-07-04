@@ -1,5 +1,8 @@
-# RBM class with gaussian visible units
-# added this class for real-valued input data
+'''
+RBM class with gaussian visible units
+added this class for real-valued input data
+'''
+
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -10,7 +13,14 @@ learning_rate = 0.001
 
 
 class RBM_with_linear_visible_units(RBM):
+    '''
+    A class that trains a RBM with linear visible units
+    drawn from a unit variance Gaussian whose mean is determined by the input from
+    the logistic visible units" (Hinton, 2006)
 
+    The only difference from RBM is how v_probs are generated and v_states are
+    sampled.
+    '''
     def v_probs(self, h):
         '''
             v_probs is defined differently than in the RBM
@@ -55,13 +65,10 @@ class RBM_with_linear_visible_units(RBM):
         # initialize weights and parameters
         if initialize_weights == True:
             self.W = np.random.normal(0., 0.1, size=(self.v_dim, self.h_dim))
-            # visible bias a_i is initialized to ln(p_i/(1-p_i)), p_i = (proportion of examples where x_i = 1)
-            # self.a = (np.log(np.mean(x,axis = 1,keepdims=True)+1e-10) - np.log(1-np.mean(x,axis = 1,keepdims=True)+1e-10))
             self.a = np.zeros((self.v_dim, 1))
             self.b = np.zeros((self.h_dim, 1))
 
         for i in range(epochs):
-            print("Epoch %i" % (i + 1))
             np.random.shuffle(x.T)
 
             if i > 5:
@@ -106,19 +113,3 @@ class RBM_with_linear_visible_units(RBM):
 
         return self.h_probs(x)
 
-    def gibbs_sampling(self, n=1, m=1, v=None):
-        '''
-            n - number of iterations of blocked Gibbs sampling
-        '''
-        if v is None:
-            v_probs = np.full((self.v_dim, m), 0.5)
-            v = np.random.binomial(1, v_probs)
-
-        h_probs = self.h_probs(v)
-        h_states = np.random.binomial(1, h_probs)
-        for i in range(n):
-            v_probs = self.v_probs(h_states)
-            v_states = v_probs + np.random.normal(0., 1., size=v_probs.shape)# this line changes
-            h_probs = self.h_probs(v_states)
-            h_states = np.random.binomial(1, h_probs)
-        return v_states, h_states

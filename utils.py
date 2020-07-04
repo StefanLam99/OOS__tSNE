@@ -1,3 +1,6 @@
+'''
+Some utility function used for our techniques.
+'''
 import sys, os, io, pstats
 import numpy as np
 import cProfile
@@ -7,10 +10,13 @@ from matplotlib import cm
 from sklearn.metrics.pairwise import euclidean_distances
 from matplotlib.ticker import NullFormatter
 import timeit
-
 from functools import wraps
 
+
 def timer(func):
+    '''
+    Wrapper funtion to time functions
+    '''
     @wraps(func)
     def _time_it(*args, **kwargs):
         start = int(round(time() * 1000))
@@ -21,13 +27,22 @@ def timer(func):
             print(f"The method '{func.__name__}' took: {end_/1000 if end_/1000 > 0 else 0} seconds")
     return _time_it
 
+
 # Disable
 def blockPrint():
+    '''
+    disables prints
+    '''
     sys.stdout = open(os.devnull, 'w')
+
 
 # Restore
 def enablePrint():
+    '''
+    enables prints
+    '''
     sys.stdout = sys.__stdout__
+
 
 def profile(fnc):
     """A decorator that uses cProfile to profile a function"""
@@ -43,8 +58,8 @@ def profile(fnc):
         ps.print_stats()
         print(s.getvalue())
         return retval
-
     return inner
+
 
 def shannon_entropy(Di, sigma=1.0):
     """
@@ -76,7 +91,7 @@ def distance_matrix_squared(X):
 
 def distance_matrix_squared2(X1, X2):
     '''
-    Computes squared distances of two different matrices, accordiing to eculidian distsance
+    Computes squared distances of two different matrices, accordiing to squared eculidian distsance
     X1:  nxD
     X2:  mxD
     returns: mxn
@@ -91,7 +106,7 @@ def distance_matrix_squared2(X1, X2):
 
 def distance_matrix(X):
     '''
-    Computes distances of a matrix column wise, according to euclidian distance
+    Computes distances of a matrix column wise, according to euclidean distance
     '''
 
     sum_X_squared = np.sum(np.square(X), 1)
@@ -99,32 +114,29 @@ def distance_matrix(X):
     D = np.maximum(D,1e-12)
     return np.sqrt(D)
 
+
 def cond_probs(X=np.array([]), tol=1e-5, perplexity=40):
     """
     Find the conditional probabilities Pj|i such that each gaussian
-    has the same perplexity of an NxD matrix
+    has the same perplexity of an NxD matrix X
     """
-    print("Start computing conditional probabilities...")
+
     # initialize variables
     begin = time()
     (n, d) = X.shape
     P = np.zeros((n, n))  # the conditional probability matrix
     sigma = np.ones((n, 1))
     logU = np.log(perplexity)
-
-    print("computing pairwaise distances...")
-    t0 = time()
     D = distance_matrix_squared(X)
-    print("Computing pairwise distances took %8.2f seconds" % (time() - t0))
 
-    print("starting binary search...")
+    print("start binary search...")
     t0 = time()
     # Compute the conditonal probabilities
     for i in range(n):
 
         # Print progress
         if i % 100 == 0:
-            print("Computing P-values for point %d of %d..." % (i, n))
+            print("Computing probablities for point %d of %d took %d seconds" % (i, n, time() - t0))
 
         # Compute the Gaussian kernel and entropy for the current precision
         sigma_min = -np.inf
@@ -149,9 +161,7 @@ def cond_probs(X=np.array([]), tol=1e-5, perplexity=40):
                     sigma[i] = sigma[i] / 2.
                 else:
                     sigma[i] = (sigma[i] + sigma_min) / 2.
-            # print('sigma max' + str(sigma_max))
-            # print('sigma min' + str(sigma_min))
-            # print(sigma[i])
+
             # Recompute the values
             (H, Pi) = shannon_entropy(Di, sigma[i])
             Hdiff = H - logU
@@ -166,10 +176,10 @@ def cond_probs(X=np.array([]), tol=1e-5, perplexity=40):
     print("Mean value of sigma: %f" % np.mean(np.sqrt(sigma)))
     return P, np.sqrt(sigma) #note: sigma is squared version
 
+
 def joint_average_P(cond_P):
     """
     Compute the joint probability matrix according to Pij = Pji =(Pi|j + Pj|i)/2
-
     """
     (n, d) = cond_P.shape
     P = (cond_P + np.transpose(cond_P)) / (2 * n)
@@ -179,18 +189,13 @@ def joint_average_P(cond_P):
 
     return P
 
+
 def joint_Q(Y, dof=1.):
     """
     Compute the joint probabilities qij of the low dimensional data Y according to the student-t with dof 1
     """
     (n, d) = Y.shape
-    ''' 
-    sum_Y_squared = np.sum(np.square(Y), 1)
-    D = np.add(np.add(-2 * np.dot(Y, Y.T), sum_Y_squared).T, sum_Y_squared) 
-    num = 1./ (1.+ D) # numerator of qij
-    num[range(n), range(n)] = 0 #qii are 0
-    Q = num/np.sum(num) #normalize
-    '''
+
 
     sum_Y_squared = np.sum(np.square(Y), 1)
     num = -2. * np.dot(Y, Y.T)
@@ -202,10 +207,11 @@ def joint_Q(Y, dof=1.):
     Q = np.maximum(Q, 1e-12)
     return Q, numerator
 
+
 def pca(X=np.array([]), no_dims=50):
     """
         Runs PCA on the NxD array X in order to reduce its dimensionality to
-        no_dims dimensions for preprocessing.
+        no_dims dimensions
     """
     print("Preprocessing the data using PCA...")
     t0 = time()
@@ -260,35 +266,19 @@ def determine_sigma(D, c):
     :param D: distance matrix
     '''
     sorted = np.sort(D,1)
-    five_neighbors = sorted[:,0:5]
-    sigma = np.mean(five_neighbors,axis=1)
+    five_neighbors = sorted[:,1:5]
+    sigma = sorted[:,6]
+    #sigma = np.mean(five_neighbors,axis=1)
     sigma_first = sorted[:,1]*c # first column are zeros for n*n
     return sigma_first
 
-def rank_matrix2(x):
-    """Returns rank matrix from pairwise distance matrix a"""
-
-    m = x.argsort()
-    r = np.zeros(x.shape)
-
-    vectors = x.shape[0]
-
-    for i in range(vectors):
-        for j in range(vectors):
-            pos = np.where(m[i, :] == j)
-            r[i, j] = pos[0][0] # there should be a better syntax for this
-
-    return r.astype('int')
 
 def rank_matrix(X):
     '''
     Computes the rank matrix for the pairwise distances of X, rows are in ascending order, according to paiwrise distances
     '''
     (n, m) = X.shape
-
     D = distance_matrix(X)
-
-
     sorted = D.argsort()
     ranks = np.zeros(D.shape)
     indices = np.r_[0:n]
@@ -296,6 +286,7 @@ def rank_matrix(X):
         ranks[i,sorted[i,:]] = indices
 
     return ranks.astype(np.int), D
+
 
 @timer
 def trustworthniness(X, y, k_neighbors):
@@ -345,6 +336,7 @@ def trustworthniness(X, y, k_neighbors):
 
     return trusts
 
+
 @timer
 def continuity(X, y, k_neighbors):
     '''
@@ -386,13 +378,17 @@ def continuity(X, y, k_neighbors):
         if k < (n/2.0):
             scaler = 2/((n*k)*(2*n - 3*k - 1))
         else:
-            scaler =  2/(n * (n - k) * (n - k - 1)) # this won't happen probably, in my case but it's the correct formula
+            scaler =  2/(n * (n - k) * (n - k - 1))
 
         continuities[l] = 1 - sum * scaler
 
     return continuities
 
+
 def plot(Y, labels, title='',marker = None ,label = False, cmap= None, s=15, save_path=None, linewidth=1, axis = 'off'):
+    '''
+    "Simple" plotting method
+    '''
     fig, ax = plt.subplots()
 
     if marker == None:
@@ -412,10 +408,15 @@ def plot(Y, labels, title='',marker = None ,label = False, cmap= None, s=15, sav
         plt.legend(*scatter.legend_elements(), loc="upper right", title='Labels', prop={'size': 6}, fancybox=True)
     fig.tight_layout()
     if save_path != None:
+        make_dir(save_path)
         plt.savefig(save_path)
     plt.show()
 
+
 def make_dir(file_path):
+    '''
+    Makes a directory for a file path if it does not already exist
+    '''
     split = file_path.rsplit('/',1)
     dir = split[0]
     import os

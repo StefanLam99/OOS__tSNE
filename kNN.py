@@ -1,7 +1,15 @@
+'''
+k-nearest neighbor classifier
+'''
 import numpy as np
 from utils import timer
 from sklearn.metrics import pairwise_distances
+
+
 class kNN():
+    '''
+    class to 'train' a k-nearest neighbor classifier
+    '''
     def __init__(self, X, y):
         self.data = X
         self.targets = y

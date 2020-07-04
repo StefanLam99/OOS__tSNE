@@ -1,17 +1,12 @@
-# Autoencoder class
 '''
-    A class defining a deep autoencoder.
-    The encoder/decoder is a deep belief network.
-    After pre-training, the model is unrolled into a keras model that
-    can then be tuned with minibatch gradient descent.
-    After training, one can compute encodings using the encode function.
+Class to pretrain the weights of an (auto)encoder network with RBMs
 '''
 import numpy as np
 import pandas as pd
 import os.path
 from RBM import *
-from RBM_with_linear_hidden_units import *
-from RBM_with_linear_visible_units import *
+from RBM_linear_hidden import *
+from RBM_linear_visible import *
 from keras.layers import Input, Dense
 from keras.models import Model
 from keras import backend as K
@@ -20,7 +15,6 @@ learning_rate = 0.01
 
 
 class Autoencoder:
-    kind = 'Autoencoder'
 
     def __init__(self, layer_dims):
         '''
@@ -34,11 +28,6 @@ class Autoencoder:
         self.v_dim = layer_dims[0]
         self.num_hidden_layers = len(layer_dims) - 1
         self.layer_dims = layer_dims
-        ''' 
-        print("Layer dimensions:")
-        for i in range(self.num_hidden_layers + 1):
-            print("Layer %i: %i" % (i, self.layer_dims[i]))
-        '''
         self.W = []
         self.b = []
         self.a = []
@@ -76,27 +65,25 @@ class Autoencoder:
     def pretrain(self, x, epochs, num_samples=50000):
         '''
             Greedy layer-wise training
-
             The last layer is a RBM with linear hidden units
             shape(x) = (v_dim, number_of_examples)
         '''
         RBM_layers = []
 
-        for i in range(self.num_hidden_layers):  # initialize RBM's
-            if i == -1:
-                RBM_layers.append(RBM_with_linear_visible_units(self.layer_dims[i], self.layer_dims[i + 1]))
+        # initialize RBMs
+        for i in range(self.num_hidden_layers):
+            if i == 0:
+                RBM_layers.append(RBM_with_linear_visible_units(self.layer_dims[i], self.layer_dims[i + 1])) # linear input
             elif  (i < self.num_hidden_layers -1):
-                RBM_layers.append(RBM(self.layer_dims[i], self.layer_dims[i + 1]))
+                RBM_layers.append(RBM(self.layer_dims[i], self.layer_dims[i + 1])) #
             else:
-                RBM_layers.append(RBM_with_linear_hidden_units(self.layer_dims[i], self.layer_dims[i + 1]))
+                RBM_layers.append(RBM_with_linear_hidden_units(self.layer_dims[i], self.layer_dims[i + 1])) # linear output
 
+        # train stack of RBMs
         for i in range(self.num_hidden_layers):  # train RBM's 
             print("Training RBM layer %i" % (i + 1))
-
             x = RBM_layers[i].train(x, epochs)  # train the ith RBM
 
-            #if not (i == self.num_hidden_layers - 1):  # generate samples to train next layer
-             #   _, x = RBM_layers[i].gibbs_sampling(2, num_samples)
 
             self.W.append(RBM_layers[i].W)  # save trained weights
             self.b.append(RBM_layers[i].b)
@@ -108,9 +95,8 @@ class Autoencoder:
 
     def unroll(self):
         '''
-            Unrolls the pretrained RBM network into a DFF keras model 
+            Unrolls the pretrained RBM network
             and sets hidden layer parameters to pretrained values.
-            Returns the keras model
         '''
         if self.pretrained == False:
             print("Model not pretrained.")
@@ -131,8 +117,8 @@ class Autoencoder:
         encoded = Dense(self.layer_dims[self.num_hidden_layers],
                   weights=weights, activation='linear', name='encoded')(x)
         x = encoded
-        # build decoder part
 
+        # build decoder part
         for i in range(self.num_hidden_layers):
             weights = [self.W[self.num_hidden_layers - i - 1].T, self.a[self.num_hidden_layers - i - 1].flatten()]
             if (i == self.num_hidden_layers -1):
@@ -170,5 +156,4 @@ class Autoencoder:
                 RBM.save_weights(weights, filename + "_" + str(i))
         else:
             print("No pretrained weights to save.")
-
         return

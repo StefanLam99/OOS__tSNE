@@ -1,14 +1,6 @@
-# RBM class
 '''
-    Adapted from code by Ruslan Salakhutdinov and Geoff Hinton
+    Adapted from the MatLab code by Ruslan Salakhutdinov and Geoff Hinton
     Available at: http://science.sciencemag.org/content/suppl/2006/08/04/313.5786.504.DC1
-    A class defining a restricted Boltzmann machine
-    whose hidden units are "real-valued feature detectors
-    drawn from a unit variance Gaussian whose mean is determined by the input from
-    the logistic visible units" (Hinton, 2006)
-
-    The only difference from RBM_with_probs is how h_probs are generated and h_states are
-    sampled.
 '''
 import numpy as np
 import random
@@ -20,7 +12,14 @@ learning_rate = 0.001
 
 
 class RBM_with_linear_hidden_units(RBM):
+    '''
+    A class that trains a RBM with linear hidden units
+    drawn from a unit variance Gaussian whose mean is determined by the input from
+    the logistic visible units" (Hinton, 2006)
 
+    The only difference from RBM is how h_probs are generated and h_states are
+    sampled.
+    '''
     def h_probs(self, v):
         '''
             h_probs is defined differently than in the RBM
@@ -114,19 +113,3 @@ class RBM_with_linear_hidden_units(RBM):
 
         return self.h_probs(x)
 
-    def gibbs_sampling(self, n=1, m=1, v=None):
-        '''
-            n - number of iterations of blocked Gibbs sampling
-        '''
-        if v is None:
-            v_probs = np.full((self.v_dim, m), 0.5)
-            v = np.random.binomial(1, v_probs)
-
-        h_probs = self.h_probs(v)
-        h_states = np.random.binomial(1, h_probs)
-        for i in range(n):
-            v_probs = self.v_probs(h_states)
-            v_states = np.random.binomial(1, v_probs)
-            h_probs = self.h_probs(v_states)
-            h_states = h_probs + np.random.normal(0., 1., size=h_probs.shape)  # this line changes
-        return v_states, h_states

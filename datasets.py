@@ -128,17 +128,23 @@ class Dataset:
         np.random.seed(self.seed)
         print('loading and preprocessing coil20 data...')
         data = np.genfromtxt('data/coil20/coil20_data.csv', delimiter=',')
+
         np.random.shuffle(data)
+
         X = data[:,0:-1].astype(np.float32, copy=False)
         y = data[:,-1].astype(np.uint32, copy = False)
 
         data_train = np.genfromtxt('data/coil20/coil20_train.csv', delimiter=',').astype(np.float32, copy = False)
+ 
         np.random.shuffle(data_train)
+
         y_train = data_train[:,-1]
         X_train = data_train[:, 0:-1]
 
         data_test = np.genfromtxt('data/coil20/coil20_test.csv', delimiter=',').astype(np.float32, copy = False)
+
         np.random.shuffle(data_test)
+
         y_test = data_test[:,-1]
         X_test = data_test[:, 0:-1]
         return X, y, X_train, y_train, X_test, y_test
@@ -189,21 +195,7 @@ class Dataset:
             print('No dataset with that name!')
 
 
-if __name__ == '__main__':
-    dataset = Dataset(0)
-    fig = plt.figure()
-    ax = plt.axes(projection="3d")
 
-    X, labels = dataset.get_SWISS_data()
-    print(X)
-    X = minmax_scale(X)
-    print(X)
-    print(labels.shape)
-    print(X[:,2].shape)
-    print(labels)
-    print(X[:,2])
-    ax.scatter3D(X[:,0], X[:,1], X[:,2], c = labels, cmap='Paired', s=2, linewidths=0.1)
-    plt.show()
 
 
 
