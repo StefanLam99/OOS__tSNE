@@ -1,5 +1,6 @@
 # OOS__tSNE
 
+Techniques to obtain a parametric mapping for dimensionality reduction: parametric and RP t-SNE (neural networks for t-SNE), kernel t-SNE (kernel function for t-SNE), autoencoders and PCA. 
 
 
 **RBM.py:** Class that trains a RBM with Bernoulli distributed binary visual and hidden nodes. Used to pretrain the weights of a layer in the autoencoder network.
