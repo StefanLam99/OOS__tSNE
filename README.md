@@ -1,6 +1,6 @@
 # OOS__tSNE
 
-Techniques to obtain a parametric mapping for dimensionality reduction: parametric and RP t-SNE (neural networks for t-SNE), kernel t-SNE (kernel function for t-SNE), autoencoders and PCA. 
+Techniques to obtain a parametric mapping for dimensionality reduction: parametric and RP t-SNE (neural networks for t-SNE), kernel t-SNE (kernel function for t-SNE), autoencoders and PCA. The paper for this code can be found at: https://thesis.eur.nl/pub/53375.
 
 **Description of code:**
 
